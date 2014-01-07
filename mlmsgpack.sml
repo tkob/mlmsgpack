@@ -180,7 +180,6 @@ functor MessagePack(structure S : sig
     val unpack : 'a unpacker -> S.instream -> 'a * S.instream
   
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
-    val unpackOption : 'a unpacker -> 'a option unpacker
     val unpackPair : 'a unpacker * 'b unpacker -> ('a * 'b) unpacker
     val unpackTuple3 : 'a unpacker * 'b unpacker * 'c unpacker -> ('a * 'b * 'c) unpacker
     val unpackTuple4 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker -> ('a * 'b * 'c * 'd) unpacker
@@ -191,6 +190,9 @@ functor MessagePack(structure S : sig
     val unpackBool : bool unpacker
     val unpackInt : int unpacker
     val unpackLargeInt : LargeInt.int unpacker
+
+    val unpackOption : 'a unpacker -> 'a option unpacker
+    val unpackNillable : 'a unpacker -> 'a option unpacker
   end
 end = struct
   structure UintScannerInt = UintScanner(Int)
@@ -339,9 +341,6 @@ end = struct
         (f v, ins')
       end
 
-    fun unpackOption u ins =
-      (u >> SOME || (fn ins => (NONE, ins))) ins
-  
     fun unpackPair (u1, u2) ins =
       let
         val (v1, ins1) = u1 ins
@@ -471,6 +470,13 @@ end = struct
         || unpackInt64   IntScannerLargeIntLargeWord.scan
       ) ins
     end
+
+    fun unpackOption u ins =
+      (u >> SOME || (fn ins => (NONE, ins))) ins
+
+    fun unpackNillable u ins =
+      (u >> SOME || unpackUnit >> (fn () => NONE)) ins
+  
   end
 end
 
