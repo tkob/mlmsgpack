@@ -180,6 +180,7 @@ functor MessagePack(structure S : sig
     val unpack : 'a unpacker -> S.instream -> 'a * S.instream
   
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
+    val unpackOption : 'a unpacker -> 'a option unpacker
     val unpackPair : 'a unpacker * 'b unpacker -> ('a * 'b) unpacker
     val unpackTuple3 : 'a unpacker * 'b unpacker * 'c unpacker -> ('a * 'b * 'c) unpacker
     val unpackTuple4 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker -> ('a * 'b * 'c * 'd) unpacker
@@ -330,6 +331,16 @@ end = struct
   
     infix 0 ||
     fun (u1 || u2) ins = u1 ins handle Unpack => u2 ins
+
+    (* transformation *)
+    infix 3 >>
+    fun (u >> f) ins =
+      let val (v, ins') = u ins in
+        (f v, ins')
+      end
+
+    fun unpackOption u ins =
+      (u >> SOME || (fn ins => (NONE, ins))) ins
   
     fun unpackPair (u1, u2) ins =
       let
