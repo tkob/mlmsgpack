@@ -219,6 +219,10 @@ end = struct
     UintPrinter(structure I = Int;
                 structure W = LargeWord;
                 structure S = S)
+  structure UintPrinterInfInt =
+    UintPrinterInf(structure I = Int;
+                   structure S = S;
+                   val fromInt = Word8.fromInt)
 
   structure IntMP = struct
     datatype int = Int of Int.int
@@ -287,6 +291,7 @@ end = struct
            (int >= ~32 andalso int <=  ~1) then
           S.output1 (outs, Word8.fromInt int)
         else if int > 0 then
+          (* positive *)
           if int < 0x10000 then
             (* uint 16 *)
             (S.output1 (outs, Word8.fromInt 0xcd);
@@ -300,7 +305,7 @@ end = struct
               UintPrinterIntLargeWord.print int 4 outs
             else
               (* is there any implementation s.t. LargeWord.wordSize < 32 ? *)
-              raise Pack) (* todo *)
+              UintPrinterInfInt.print int 8 outs)
           else
             (* uint 64 *)
             (S.output1 (outs, Word8.fromInt 0xcf);
@@ -309,8 +314,9 @@ end = struct
             else if LargeWord.wordSize >= 64 then
               UintPrinterIntLargeWord.print int 8 outs
             else
-              raise Pack) (* todo *)
+              UintPrinterInfInt.print int 8 outs)
         else
+          (* negative *)
           raise Pack (* todo *)
     end
   end
