@@ -308,7 +308,7 @@ end = struct
               UintPrinterIntLargeWord.print int 4 outs
             else
               (* is there any implementation s.t. LargeWord.wordSize < 32 ? *)
-              UintPrinterInfInt.print int 8 outs)
+              UintPrinterInfInt.print int 4 outs)
           else
             (* uint 64 *)
             (S.output1 (outs, Word8.fromInt 0xcf);
