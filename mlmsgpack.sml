@@ -504,6 +504,24 @@ end = struct
   fun output1 (outs, byte) = TextIO.output1 (outs, (Byte.byteToChar byte))
 end
 
+structure IntListIO = struct
+  type instream = int list
+  type outstream = int list ref
+  fun input1 [] = NONE
+    | input1 (x::xs) = SOME (Word8.fromInt x, xs)
+  fun inputN (ins, n) =
+    let
+      val vector = Word8Vector.fromList (map Word8.fromInt (List.take (ins, n)))
+      val ins' = List.drop (ins, n)
+    in
+      (vector, ins')
+    end
+  fun output1 (outs, byte) =
+    outs := (Word8.toInt byte)::(!outs)
+  fun toList outs = List.rev (!outs)
+end
+
 structure MessagePackBinIO = MessagePack(structure S = BinIO.StreamIO)
 structure MessagePackBinTextIO = MessagePack(structure S = BinTextIO)
+structure MessagePackIntListIO = MessagePack(structure S = IntListIO)
 
