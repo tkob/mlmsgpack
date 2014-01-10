@@ -298,21 +298,6 @@ end = struct
       val fromWordToWord8 = Word8.fromLarge o Word.toLarge
       fun outputFixArray length outs =
         S.output1 (outs, fixArray length)
-      fun packLength int n outs =
-        let
-          fun loop word n bytes =
-            if n = 0 then
-              List.app (fn byte => S.output1 (outs, byte)) bytes
-            else
-              let
-                val byte = fromWordToWord8 (Word.andb (word, Word.fromInt 0xff))
-                val word' = Word.>> (word, Word.fromInt 8)
-              in
-                loop word' (n - 1) (byte::bytes)
-              end
-        in
-          loop (Word.fromInt int) n []
-        end
       fun packListLike length app p values outs =
         let
           val length = length values
@@ -322,10 +307,19 @@ end = struct
             outputFixArray length outs
           else if length < 0x10000 then
             (* array 16 *)
-            (S.output1 (outs, Word8.fromInt 0xdc); packLength length 2 outs)
-          else
+            (S.output1 (outs, Word8.fromInt 0xdc);
+            UintPrinterIntWord.print length 2 outs)
+          else if length div 0x10000 div 0x10000 = 0 then
             (* array 32 *)
-            (S.output1 (outs, Word8.fromInt 0xdd); packLength length 4 outs);
+            (S.output1 (outs, Word8.fromInt 0xdd);
+            if Word.wordSize >= 32 then
+              UintPrinterIntWord.print length 4 outs
+            else if LargeWord.wordSize >= 32 then
+              UintPrinterIntLargeWord.print length 4 outs
+            else
+              UintPrinterInfInt.print length 4 outs)
+          else 
+            raise Size;
           app (fn value => p value outs) values
         end
     in
