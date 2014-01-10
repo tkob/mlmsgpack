@@ -163,6 +163,7 @@ end
    UintPrinterInf prints I.int value. Word8.word list is used for working memory
      I: integer type
      S: output stream
+     fromInt: Word8.fromInt or Word8.fromLargeInt
 *)
 functor UintPrinterInf(structure I : I;
                        structure S : sig
@@ -261,6 +262,7 @@ end = struct
     UintPrinterInf(structure I = Int;
                    structure S = S;
                    val fromInt = Word8.fromInt)
+
   structure IntPrinterInfInt = UintPrinterInfInt
 
   structure IntMP = struct
@@ -339,7 +341,7 @@ end = struct
             (* uint 16 *)
             (S.output1 (outs, Word8.fromInt 0xcd);
             UintPrinterIntWord.print int 2 outs)
-          else if int div 0x10000 div 0x10000= 0 then
+          else if int div 0x10000 div 0x10000 = 0 then
             (* uint 32 *)
             (S.output1 (outs, Word8.fromInt 0xce);
             if Word.wordSize >= 32 then
@@ -349,7 +351,7 @@ end = struct
             else
               (* is there any implementation s.t. LargeWord.wordSize < 32 ? *)
               UintPrinterInfInt.print int 4 outs)
-          else
+          else if int div 0x10000 div 0x10000 div 0x10000 div 0x10000 = 0 then
             (* uint 64 *)
             (S.output1 (outs, Word8.fromInt 0xcf);
             if Word.wordSize >= 64 then
@@ -358,6 +360,8 @@ end = struct
               UintPrinterIntLargeWord.print int 8 outs
             else
               UintPrinterInfInt.print int 8 outs)
+          else
+            raise Overflow
         else
           (* negative *)
           if int >= ~128 then
@@ -378,7 +382,7 @@ end = struct
               UintPrinterIntLargeWord.print int 4 outs
             else*)
             IntPrinterInfInt.print int 4 outs)
-          else
+          else if int div 0x8000 div 0x10000 div 0x10000 div 0x10000 = ~1 then
             (* uint 64 *)
             (S.output1 (outs, Word8.fromInt 0xd3);
             (*if Word.wordSize >= 64 then
@@ -387,6 +391,8 @@ end = struct
               UintPrinterIntLargeWord.print int 8 outs
             else*)
             IntPrinterInfInt.print int 8 outs)
+          else
+            raise Overflow
     end
   end
 
