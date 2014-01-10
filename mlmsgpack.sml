@@ -114,7 +114,7 @@ functor UintPrinter(structure I : I;
                       type outstream
                       val output1 : outstream * Word8.word -> unit
                     end) :> sig
-  (* print int n outs: int must be positive *)
+  (* print int n outs *)
   val print : I.int -> int -> S.outstream -> unit
 end = struct
   (* with the expectation that the compiler will optimize this idiom *)
@@ -202,10 +202,16 @@ functor MessagePack(structure S : sig
 
     val pack : 'a packer -> 'a -> S.outstream -> unit
 
-    val packPair   : 'a packer * 'b packer -> ('a * 'b) packer
     val packList   : 'a packer -> 'a list   packer
     val packVector : 'a packer -> 'a vector packer
     val packArray  : 'a packer -> 'a array  packer
+
+    val packPair   : 'a packer * 'b packer -> ('a * 'b) packer
+    val packTuple3 : 'a packer * 'b packer * 'c packer -> ('a * 'b * 'c) packer
+    val packTuple4 : 'a packer * 'b packer * 'c packer * 'd packer -> ('a * 'b * 'c * 'd) packer
+    val packTuple5 : 'a packer * 'b packer * 'c packer * 'd packer * 'e packer -> ('a * 'b * 'c * 'd * 'e) packer
+    val packTuple6 : 'a packer * 'b packer * 'c packer * 'd packer * 'e packer * 'f packer -> ('a * 'b * 'c * 'd * 'e * 'f) packer
+
     val packUnit   : unit packer
     val packBool   : bool packer
     val packInt    : int packer
@@ -277,6 +283,8 @@ end = struct
                  | Word8VectorSlice of Word8VectorSlice.slice
   end
 
+  fun fixArray length = Word8.orb (Word8.fromInt 0x90, Word8.fromInt length)
+
   structure Pack = struct
     exception Pack
 
@@ -288,6 +296,8 @@ end = struct
       (* with the expectation that the compiler will optimize this idiom *)
       val fromWord8ToWord = Word.fromLarge o Word8.toLarge
       val fromWordToWord8 = Word8.fromLarge o Word.toLarge
+      fun outputFixArray length outs =
+        S.output1 (outs, fixArray length)
       fun packLength int n outs =
         let
           fun loop word n bytes =
@@ -309,7 +319,7 @@ end = struct
         in
           if length < 0x10 then
             (* FixArray *) 
-            S.output1 (outs, Word8.orb (Word8.fromInt 0x90, Word8.fromInt length))
+            outputFixArray length outs
           else if length < 0x10000 then
             (* array 16 *)
             (S.output1 (outs, Word8.fromInt 0xdc); packLength length 2 outs)
@@ -319,11 +329,26 @@ end = struct
           app (fn value => p value outs) values
         end
     in
-      fun packPair (p1, p2) (v1, v2) outs = (p1 v1 outs; p2 v2 outs)
       fun packList   p values outs = packListLike List.length   List.app   p values outs
       fun packVector p values outs = packListLike Vector.length Vector.app p values outs
       fun packArray  p values outs = packListLike Array.length  Array.app  p values outs
   
+      fun packPair (p1, p2) (v1, v2) outs =
+        (outputFixArray 2 outs;
+        p1 v1 outs; p2 v2 outs)
+      fun packTuple3 (p1, p2, p3) (v1, v2, v3) outs =
+        (outputFixArray 3 outs;
+        p1 v1 outs; p2 v2 outs; p3 v3 outs)
+      fun packTuple4 (p1, p2, p3, p4) (v1, v2, v3, v4) outs =
+        (outputFixArray 4 outs;
+        p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs)
+      fun packTuple5 (p1, p2, p3, p4, p5) (v1, v2, v3, v4, v5) outs =
+        (outputFixArray 5 outs;
+        p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs; p5 v5 outs)
+      fun packTuple6 (p1, p2, p3, p4, p5, p6) (v1, v2, v3, v4, v5, v6) outs =
+        (outputFixArray 6 outs;
+        p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs; p5 v5 outs; p6 v6 outs)
+
       fun packUnit () outs = S.output1 (outs, Word8.fromInt 0xc0)
       fun packBool bool outs =
         if bool then S.output1 (outs, Word8.fromInt 0xc3)
@@ -414,8 +439,14 @@ end = struct
         (f v, ins')
       end
 
+    fun expect expected ins =
+      case S.input1 ins of
+        SOME (byte, ins') => if byte = expected then ins' else raise Unpack
+      | NONE => raise Unpack
+ 
     fun unpackPair (u1, u2) ins =
       let
+        val ins0 = expect (fixArray 2) ins
         val (v1, ins1) = u1 ins
         val (v2, ins2) = u2 ins1
       in
@@ -424,6 +455,7 @@ end = struct
   
     fun unpackTuple3 (u1, u2, u3) ins =
       let
+        val ins0 = expect (fixArray 3) ins
         val (v1, ins1) = u1 ins
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
@@ -433,6 +465,7 @@ end = struct
   
     fun unpackTuple4 (u1, u2, u3, u4) ins =
       let
+        val ins0 = expect (fixArray 4) ins
         val (v1, ins1) = u1 ins
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
@@ -443,6 +476,7 @@ end = struct
   
     fun unpackTuple5 (u1, u2, u3, u4, u5) ins =
       let
+        val ins0 = expect (fixArray 5) ins
         val (v1, ins1) = u1 ins
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
@@ -454,6 +488,7 @@ end = struct
   
     fun unpackTuple6 (u1, u2, u3, u4, u5, u6) ins =
       let
+        val ins0 = expect (fixArray 6) ins
         val (v1, ins1) = u1 ins
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
@@ -608,7 +643,6 @@ structure PackTest = struct
       pack p i outs;
       IntListIO.toList outs
     end
-  val doPackInt = doPack packInt
   
   infix 4 <?
   fun (precision <? n) =
@@ -618,39 +652,47 @@ structure PackTest = struct
 
   fun doIt () =
     let
-      val true = doPackInt 0 = [0]
-      val true = doPackInt 127 = [127] (* max positive fixnum *)
-      val true = doPackInt 128 = [0xcc, 128]
-      val true = doPackInt 0xff = [0xcc, 255] (* max uint 8 *)
+      val true = doPack packInt 0 = [0]
+      val true = doPack packInt 127 = [127] (* max positive fixnum *)
+      val true = doPack packInt 128 = [0xcc, 128]
+      val true = doPack packInt 0xff = [0xcc, 255] (* max uint 8 *)
 
-      val true = doPackInt 0x100 = [0xcd, 0x01, 0x00]
-      val true = doPackInt 0xffff = [0xcd, 0xff, 0xff] (* max uint 16 *)
+      val true = doPack packInt 0x100 = [0xcd, 0x01, 0x00]
+      val true = doPack packInt 0xffff = [0xcd, 0xff, 0xff] (* max uint 16 *)
 
-      val true = doPackInt 0x10000 = [0xce, 0x00, 0x01, 0x00, 0x00]
-      val true = doPackInt 0x3fffffff = [0xce, 0x3f, 0xff, 0xff, 0xff] (* max int 31 *)
-      val true = Int.precision <? 32 orelse doPackInt (0x7fff * 0x10000 + 0xffff) = [0xce, 0x7f, 0xff, 0xff, 0xff] (* max int 32 *)
-      val true = Int.precision <? 33 orelse doPackInt (0xffff * 0x10000 + 0xffff) = [0xce, 0xff, 0xff, 0xff, 0xff] (* max uint 32 *)
+      val true = doPack packInt 0x10000 = [0xce, 0x00, 0x01, 0x00, 0x00]
+      val true = doPack packInt 0x3fffffff = [0xce, 0x3f, 0xff, 0xff, 0xff] (* max int 31 *)
+      val true = Int.precision <? 32 orelse doPack packInt (0x7fff * 0x10000 + 0xffff) = [0xce, 0x7f, 0xff, 0xff, 0xff] (* max int 32 *)
+      val true = Int.precision <? 33 orelse doPack packInt (0xffff * 0x10000 + 0xffff) = [0xce, 0xff, 0xff, 0xff, 0xff] (* max uint 32 *)
 
-      val true = Int.precision <? 34 orelse doPackInt (0xffff * 0x10000 + 0xffff + 1) = [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
-      val true = Int.precision <? 63 orelse doPackInt (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 63 *)
-      val true = Int.precision <? 64 orelse doPackInt (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 64 *)
-      val true = Int.precision <? 65 orelse doPackInt (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max uint 64 *)
+      val true = Int.precision <? 34 orelse doPack packInt (0xffff * 0x10000 + 0xffff + 1) = [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
+      val true = Int.precision <? 63 orelse doPack packInt (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 63 *)
+      val true = Int.precision <? 64 orelse doPack packInt (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 64 *)
+      val true = Int.precision <? 65 orelse doPack packInt (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max uint 64 *)
 
-      val true = doPackInt ~1 = [0xff]
-      val true = doPackInt ~32 = [0xe0] (* min negative fixnum *)
+      val true = doPack packInt ~1 = [0xff]
+      val true = doPack packInt ~32 = [0xe0] (* min negative fixnum *)
 
-      val true = doPackInt ~33 = [0xd0, 0xdf]
-      val true = doPackInt ~128 = [0xd0, 0x80] (* min int 8 *)
+      val true = doPack packInt ~33 = [0xd0, 0xdf]
+      val true = doPack packInt ~128 = [0xd0, 0x80] (* min int 8 *)
 
-      val true = doPackInt ~129 = [0xd1, 0xff, 0x7f]
-      val true = doPackInt ~32768 = [0xd1, 0x80, 0x00] (* min int 16 *)
+      val true = doPack packInt ~129 = [0xd1, 0xff, 0x7f]
+      val true = doPack packInt ~32768 = [0xd1, 0x80, 0x00] (* min int 16 *)
 
-      val true = doPackInt ~32769 = [0xd2, 0xff, 0xff, 0x7f, 0xff]
-      val true = doPackInt ~1073741824 = [0xd2, 0xc0, 0x00, 0x00, 0x00] (* min int 31 *)
-      val true = Int.precision <? 32 orelse doPackInt (~0x8000 * 0x10000) (* ~2147483648 *) = [0xd2, 0x80, 0x00, 0x00, 0x00] (* min int 32 *)
+      val true = doPack packInt ~32769 = [0xd2, 0xff, 0xff, 0x7f, 0xff]
+      val true = doPack packInt ~1073741824 = [0xd2, 0xc0, 0x00, 0x00, 0x00] (* min int 31 *)
+      val true = Int.precision <? 32 orelse doPack packInt (~0x8000 * 0x10000) (* ~2147483648 *) = [0xd2, 0x80, 0x00, 0x00, 0x00] (* min int 32 *)
 
-      val true = Int.precision <? 64 orelse doPackInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff]
-      val true = Int.precision <? 64 orelse doPackInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *)
+      val true = Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff]
+      val true = Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *)
+
+      val true = doPack (packPair (packInt, packInt)) (1, 2) = [0x92, 1, 2]
+      val true = doPack (packPair (packInt, packInt)) (1, 128) = [0x92, 1, 0xcc, 128]
+      val true = doPack (packPair (packInt, packPair (packInt, packInt))) (1, (2, 3)) = [0x92, 1, 0x92, 2, 3]
+      val true = doPack (packTuple3 (packInt, packInt, packInt)) (1, 2, 3) = [0x93, 1, 2, 3]
+      val true = doPack (packTuple4 (packInt, packInt, packInt, packInt)) (1, 2, 3, 4) = [0x94, 1, 2, 3, 4]
+      val true = doPack (packTuple5 (packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5) = [0x95, 1, 2, 3, 4, 5]
+      val true = doPack (packTuple6 (packInt, packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5, 6) = [0x96, 1, 2, 3, 4, 5, 6]
     in
       ()
     end
