@@ -263,6 +263,8 @@ end = struct
                    structure S = S;
                    val fromInt = Word8.fromInt)
 
+  structure IntPrinterIntWord = UintPrinterIntWord
+  structure IntPrinterIntLargeWord = UintPrinterIntLargeWord
   structure IntPrinterInfInt = UintPrinterInfInt
 
   structure IntMP = struct
@@ -336,7 +338,7 @@ end = struct
           if int < 0x100 then
             (* uint 8 *)
             (S.output1 (outs, Word8.fromInt 0xcc);
-            UintPrinterInfInt.print int 1 outs)
+            S.output1 (outs, Word8.fromInt int))
           else if int < 0x10000 then
             (* uint 16 *)
             (S.output1 (outs, Word8.fromInt 0xcd);
@@ -365,32 +367,31 @@ end = struct
         else
           (* negative *)
           if int >= ~128 then
-            (* uint 8 *)
+            (* int 8 *)
             (S.output1 (outs, Word8.fromInt 0xd0);
-            IntPrinterInfInt.print int 1 outs)
-            (*(S.output1 (outs, Word8.fromInt int);*)
+            S.output1 (outs, Word8.fromInt int))
           else if int >= ~32768 then
-            (* uint 16 *)
+            (* int 16 *)
             (S.output1 (outs, Word8.fromInt 0xd1);
-            IntPrinterInfInt.print int 2 outs)
+            IntPrinterIntWord.print int 2 outs)
           else if int div 0x8000 div 0x10000 = ~1 then
-            (* uint 32 *)
+            (* int 32 *)
             (S.output1 (outs, Word8.fromInt 0xd2);
-            (*if Word.wordSize >= 32 then
-              UintPrinterIntWord.print int 4 outs
+            if Word.wordSize >= 32 then
+              IntPrinterIntWord.print int 4 outs
             else if LargeWord.wordSize >= 32 then
-              UintPrinterIntLargeWord.print int 4 outs
-            else*)
-            IntPrinterInfInt.print int 4 outs)
+              IntPrinterIntLargeWord.print int 4 outs
+            else
+              IntPrinterInfInt.print int 4 outs)
           else if int div 0x8000 div 0x10000 div 0x10000 div 0x10000 = ~1 then
-            (* uint 64 *)
+            (* int 64 *)
             (S.output1 (outs, Word8.fromInt 0xd3);
-            (*if Word.wordSize >= 64 then
-              UintPrinterIntWord.print int 8 outs
+            if Word.wordSize >= 64 then
+              IntPrinterIntWord.print int 8 outs
             else if LargeWord.wordSize >= 64 then
-              UintPrinterIntLargeWord.print int 8 outs
-            else*)
-            IntPrinterInfInt.print int 8 outs)
+              IntPrinterIntLargeWord.print int 8 outs
+            else
+              IntPrinterInfInt.print int 8 outs)
           else
             raise Overflow
     end
