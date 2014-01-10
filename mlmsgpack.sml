@@ -686,13 +686,37 @@ structure PackTest = struct
       val true = Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff]
       val true = Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *)
 
+      val true = doPack packUnit () = [0xc0]
+      val true = doPack packBool false = [0xc2]
+      val true = doPack packBool true = [0xc3]
+
       val true = doPack (packPair (packInt, packInt)) (1, 2) = [0x92, 1, 2]
       val true = doPack (packPair (packInt, packInt)) (1, 128) = [0x92, 1, 0xcc, 128]
+      val true = doPack (packPair (packInt, packBool)) (128, true) = [0x92, 0xcc, 128, 0xc3]
       val true = doPack (packPair (packInt, packPair (packInt, packInt))) (1, (2, 3)) = [0x92, 1, 0x92, 2, 3]
       val true = doPack (packTuple3 (packInt, packInt, packInt)) (1, 2, 3) = [0x93, 1, 2, 3]
       val true = doPack (packTuple4 (packInt, packInt, packInt, packInt)) (1, 2, 3, 4) = [0x94, 1, 2, 3, 4]
       val true = doPack (packTuple5 (packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5) = [0x95, 1, 2, 3, 4, 5]
       val true = doPack (packTuple6 (packInt, packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5, 6) = [0x96, 1, 2, 3, 4, 5, 6]
+
+      val true = doPack (packList packInt) [] = [0x90]
+      val true = doPack (packList packInt) [0] = [0x91, 0]
+      val true = doPack (packList packInt) (List.tabulate (15, fn n => n))  = 0x9f::List.tabulate (15, fn n => n)
+      val true = doPack (packList packInt) (List.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)
+      val true = doPack (packList packInt) (List.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)
+
+      val true = doPack (packVector packInt) (Vector.tabulate (0, fn n => n)) = [0x90]
+      val true = doPack (packVector packInt) (Vector.tabulate (1, fn n => n)) =  [0x91, 0]
+      val true = doPack (packVector packInt) (Vector.tabulate (15, fn n => n)) = 0x9f::List.tabulate (15, fn n => n)
+      val true = doPack (packVector packInt) (Vector.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)
+      val true = doPack (packVector packInt) (Vector.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)
+
+      val true = doPack (packArray packInt) (Array.tabulate (0, fn n => n)) = [0x90]
+      val true = doPack (packArray packInt) (Array.tabulate (1, fn n => n)) =  [0x91, 0]
+      val true = doPack (packArray packInt) (Array.tabulate (15, fn n => n)) = 0x9f::List.tabulate (15, fn n => n)
+      val true = doPack (packArray packInt) (Array.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)
+      val true = doPack (packArray packInt) (Array.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)
+
     in
       ()
     end
