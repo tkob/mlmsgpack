@@ -140,7 +140,7 @@ end = struct
   fun explode int n =
     let
       fun loop int n bytes =
-        if n = 0 then []
+        if n = 0 then bytes
         else
           let val byte = fromInt int in
             loop (I.div (int, I.fromInt 0x100)) (n - 1) (byte::bytes)
@@ -226,6 +226,7 @@ end = struct
     UintPrinterInf(structure I = Int;
                    structure S = S;
                    val fromInt = Word8.fromInt)
+  structure IntPrinterInfInt = UintPrinterInfInt
 
   structure IntMP = struct
     datatype int = Int of Int.int
@@ -295,7 +296,11 @@ end = struct
           S.output1 (outs, Word8.fromInt int)
         else if int > 0 then
           (* positive *)
-          if int < 0x10000 then
+          if int < 0x100 then
+            (* uint 8 *)
+            (S.output1 (outs, Word8.fromInt 0xcc);
+            UintPrinterInfInt.print int 1 outs)
+          else if int < 0x10000 then
             (* uint 16 *)
             (S.output1 (outs, Word8.fromInt 0xcd);
             UintPrinterIntWord.print int 2 outs)
@@ -320,7 +325,33 @@ end = struct
               UintPrinterInfInt.print int 8 outs)
         else
           (* negative *)
-          raise Pack (* todo *)
+          if int >= ~128 then
+            (* uint 8 *)
+            (S.output1 (outs, Word8.fromInt 0xd0);
+            IntPrinterInfInt.print int 1 outs)
+            (*(S.output1 (outs, Word8.fromInt int);*)
+          else if int >= ~32768 then
+            (* uint 16 *)
+            (S.output1 (outs, Word8.fromInt 0xd1);
+            IntPrinterInfInt.print int 2 outs)
+          else if int div 0x8000 div 0x10000 = ~1 then
+            (* uint 32 *)
+            (S.output1 (outs, Word8.fromInt 0xd2);
+            (*if Word.wordSize >= 32 then
+              UintPrinterIntWord.print int 4 outs
+            else if LargeWord.wordSize >= 32 then
+              UintPrinterIntLargeWord.print int 4 outs
+            else*)
+            IntPrinterInfInt.print int 4 outs)
+          else
+            (* uint 64 *)
+            (S.output1 (outs, Word8.fromInt 0xd3);
+            (*if Word.wordSize >= 64 then
+              UintPrinterIntWord.print int 8 outs
+            else if LargeWord.wordSize >= 64 then
+              UintPrinterIntLargeWord.print int 8 outs
+            else*)
+            IntPrinterInfInt.print int 8 outs)
     end
   end
 
@@ -519,9 +550,46 @@ structure IntListIO = struct
   fun output1 (outs, byte) =
     outs := (Word8.toInt byte)::(!outs)
   fun toList outs = List.rev (!outs)
+  fun mkOutstream () : outstream = ref []
 end
 
 structure MessagePackBinIO = MessagePack(structure S = BinIO.StreamIO)
 structure MessagePackBinTextIO = MessagePack(structure S = BinTextIO)
 structure MessagePackIntListIO = MessagePack(structure S = IntListIO)
+
+structure PackTest = struct
+  open MessagePackIntListIO.Pack
+  fun doPack p i =
+    let val outs = IntListIO.mkOutstream () in
+      pack p i outs;
+      IntListIO.toList outs
+    end
+  val doPackInt = doPack packInt
+  
+  infix 4 <?
+  fun (precision <? n) =
+    case precision of
+      NONE => false
+    | SOME p => p < n
+
+  fun doIt () =
+    let
+      val true = doPackInt 0 = [0]
+      val true = doPackInt 127 = [127]
+      val true = doPackInt 128 = [0xcc, 128]
+      val true = doPackInt ~1 = [0xff]
+      val true = doPackInt ~32 = [0xe0] (* min negative fixnum *)
+      val true = doPackInt ~33 = [0xd0, 0xdf]
+      val true = doPackInt ~128 = [0xd0, 0x80] (* min int 8 *)
+      val true = doPackInt ~129 = [0xd1, 0xff, 0x7f]
+      val true = doPackInt ~32768 = [0xd1, 0x80, 0x00] (* min int 16 *)
+      val true = doPackInt ~32769 = [0xd2, 0xff, 0xff, 0x7f, 0xff]
+      val true = doPackInt ~1073741824 = [0xd2, 0xc0, 0x00, 0x00, 0x00] (* min int 31 *)
+      val true = Int.precision <? 32 orelse doPackInt (~0x8000 * 0x10000) (* ~2147483648 *) = [0xd2, 0x80, 0x00, 0x00, 0x00] (* min int 32 *)
+      val true = Int.precision <? 64 orelse doPackInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff]
+      val true = Int.precision <? 64 orelse doPackInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *)
+    in
+      ()
+    end
+end
 
