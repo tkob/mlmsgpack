@@ -1,3 +1,38 @@
+signature I = sig
+  eqtype int
+
+  val toLarge   : int -> LargeInt.int
+  val fromLarge : LargeInt.int -> int
+  val fromInt : Int.int -> int
+  
+  val + : int * int -> int
+  val * : int * int -> int
+  val div : int * int -> int
+end
+
+signature W = sig
+  eqtype word
+  
+  val wordSize : int
+  
+  val toLarge      : word -> LargeWord.word
+  val fromLarge     : LargeWord.word -> word
+  val toLargeInt  : word -> LargeInt.int
+  val toLargeIntX : word -> LargeInt.int
+  val toInt  : word -> int
+  val toIntX : word -> int
+  val fromInt : int -> word
+  
+  val andb : word * word -> word
+  val orb  : word * word -> word
+  val notb : word -> word
+  val << : word * Word.word -> word
+  val >> : word * Word.word -> word
+  
+  val + : word * word -> word
+  val * : word * word -> word
+end
+
 (* 
   requirement:
     Int.precision >= 16 andalso Word.wordSize >= 16
@@ -11,7 +46,7 @@ val true = case Int.precision of
   UintScanner scans unsigned integer from Word8Vector and construct I.int value
     I: result integer type
 *)
-functor UintScanner(I : INTEGER) :> sig
+functor UintScanner(I : I) :> sig
   val scan : Word8Vector.vector -> I.int
 end = struct
   (* with the expectation that the compiler will optimize this idiom *)
@@ -30,13 +65,13 @@ end
      W: word type used for intermediate working memory
      toInt: a function that converts a W value into I
 *)
-functor IntScanner(structure I : INTEGER;
-                   structure W : WORD;
+functor IntScanner(structure I : I;
+                   structure W : W;
                    val toInt : W.word -> I.int) :> sig
   val scan : Word8Vector.vector -> I.int
 end = struct
   (* with the expectation that the compiler will optimize this idiom *)
-  val fromWord8ToW = W.fromLargeWord o Word8.toLargeWord
+  val fromWord8ToW = W.fromLarge o Word8.toLarge
   fun scan bytes =
     let
       val length = Word8Vector.length bytes
@@ -73,8 +108,8 @@ end
      W: word type used for intermediate working memory
      S: output stream
 *)
-functor UintPrinter(structure I : INTEGER;
-                    structure W : WORD;
+functor UintPrinter(structure I : I;
+                    structure W : W;
                     structure S : sig
                       type outstream
                       val output1 : outstream * Word8.word -> unit
@@ -83,8 +118,8 @@ functor UintPrinter(structure I : INTEGER;
   val print : I.int -> int -> S.outstream -> unit
 end = struct
   (* with the expectation that the compiler will optimize this idiom *)
-  val fromIToW = W.fromLargeWord o LargeWord.fromLargeInt o I.toLarge
-  val fromWToWord8 = Word8.fromLargeWord o W.toLargeWord
+  val fromIToW = W.fromLarge o LargeWord.fromLargeInt o I.toLarge
+  val fromWToWord8 = Word8.fromLarge o W.toLarge
   fun reverse int n =
     let
       val word = fromIToW int
@@ -129,7 +164,7 @@ end
      I: integer type
      S: output stream
 *)
-functor UintPrinterInf(structure I : INTEGER;
+functor UintPrinterInf(structure I : I;
                        structure S : sig
                          type outstream
                          val output1 : outstream * Word8.word -> unit
@@ -247,8 +282,8 @@ end = struct
 
     local
       (* with the expectation that the compiler will optimize this idiom *)
-      val fromWord8ToWord = Word.fromLargeWord o Word8.toLargeWord
-      val fromWordToWord8 = Word8.fromLargeWord o Word.toLargeWord
+      val fromWord8ToWord = Word.fromLarge o Word8.toLarge
+      val fromWordToWord8 = Word8.fromLarge o Word.toLarge
       fun packLength int n outs =
         let
           fun loop word n bytes =
@@ -511,6 +546,7 @@ end = struct
   end
 end
 
+(*
 structure BinTextIO :> sig
   type instream
   type outstream
@@ -534,6 +570,7 @@ end = struct
     end
   fun output1 (outs, byte) = TextIO.output1 (outs, (Byte.byteToChar byte))
 end
+*)
 
 structure IntListIO = struct
   type instream = int list
@@ -553,8 +590,8 @@ structure IntListIO = struct
   fun mkOutstream () : outstream = ref []
 end
 
-structure MessagePackBinIO = MessagePack(structure S = BinIO.StreamIO)
-structure MessagePackBinTextIO = MessagePack(structure S = BinTextIO)
+(* structure MessagePackBinIO = MessagePack(structure S = BinIO.StreamIO)
+structure MessagePackBinTextIO = MessagePack(structure S = BinTextIO) *)
 structure MessagePackIntListIO = MessagePack(structure S = IntListIO)
 
 structure PackTest = struct
@@ -575,17 +612,36 @@ structure PackTest = struct
   fun doIt () =
     let
       val true = doPackInt 0 = [0]
-      val true = doPackInt 127 = [127]
+      val true = doPackInt 127 = [127] (* max positive fixnum *)
       val true = doPackInt 128 = [0xcc, 128]
+      val true = doPackInt 0xff = [0xcc, 255] (* max uint 8 *)
+
+      val true = doPackInt 0x100 = [0xcd, 0x01, 0x00]
+      val true = doPackInt 0xffff = [0xcd, 0xff, 0xff] (* max uint 16 *)
+
+      val true = doPackInt 0x10000 = [0xce, 0x00, 0x01, 0x00, 0x00]
+      val true = doPackInt 0x3fffffff = [0xce, 0x3f, 0xff, 0xff, 0xff] (* max int 31 *)
+      val true = Int.precision <? 32 orelse doPackInt (0x7fff * 0x10000 + 0xffff) = [0xce, 0x7f, 0xff, 0xff, 0xff] (* max int 32 *)
+      val true = Int.precision <? 33 orelse doPackInt (0xffff * 0x10000 + 0xffff) = [0xce, 0xff, 0xff, 0xff, 0xff] (* max uint 32 *)
+
+      val true = Int.precision <? 34 orelse doPackInt (0xffff * 0x10000 + 0xffff + 1) = [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
+      val true = Int.precision <? 63 orelse doPackInt (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 63 *)
+      val true = Int.precision <? 64 orelse doPackInt (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 64 *)
+      val true = Int.precision <? 65 orelse doPackInt (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max uint 64 *)
+
       val true = doPackInt ~1 = [0xff]
       val true = doPackInt ~32 = [0xe0] (* min negative fixnum *)
+
       val true = doPackInt ~33 = [0xd0, 0xdf]
       val true = doPackInt ~128 = [0xd0, 0x80] (* min int 8 *)
+
       val true = doPackInt ~129 = [0xd1, 0xff, 0x7f]
       val true = doPackInt ~32768 = [0xd1, 0x80, 0x00] (* min int 16 *)
+
       val true = doPackInt ~32769 = [0xd2, 0xff, 0xff, 0x7f, 0xff]
       val true = doPackInt ~1073741824 = [0xd2, 0xc0, 0x00, 0x00, 0x00] (* min int 31 *)
       val true = Int.precision <? 32 orelse doPackInt (~0x8000 * 0x10000) (* ~2147483648 *) = [0xd2, 0x80, 0x00, 0x00, 0x00] (* min int 32 *)
+
       val true = Int.precision <? 64 orelse doPackInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff]
       val true = Int.precision <? 64 orelse doPackInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *)
     in
