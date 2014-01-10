@@ -222,6 +222,9 @@ functor MessagePack(structure S : sig
     val unpack : 'a unpacker -> S.instream -> 'a * S.instream
   
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
+
+    val unpackList : 'a unpacker -> 'a list unpacker
+
     val unpackPair : 'a unpacker * 'b unpacker -> ('a * 'b) unpacker
     val unpackTuple3 : 'a unpacker * 'b unpacker * 'c unpacker -> ('a * 'b * 'c) unpacker
     val unpackTuple4 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker -> ('a * 'b * 'c * 'd) unpacker
@@ -437,6 +440,50 @@ end = struct
       case S.input1 ins of
         SOME (byte, ins') => if byte = expected then ins' else raise Unpack
       | NONE => raise Unpack
+
+    local
+      fun unpackArray u length ins =
+        let
+          fun loop ins n values =
+            if n = 0 then (rev values, ins)
+            else
+              let val (value, ins') = u ins in
+                loop ins' (n - 1) (value::values)
+              end
+        in
+          loop ins length []
+        end
+      fun isFixArray byte = Word8.andb (byte, Word8.fromInt 0xf0) = Word8.fromInt 0x90
+      fun lengthOfFixArray byte = Word8.toInt (Word8.andb (byte, Word8.fromInt 0x0f))
+      fun unpackFixArray u ins =
+        case S.input1 ins of
+          SOME (byte, ins')
+            => if isFixArray byte then unpackArray u (lengthOfFixArray byte) ins'
+               else raise Unpack
+        | NONE => raise Unpack
+      fun unpackArray16 u ins = 
+        let
+          val ins' = expect (Word8.fromInt 0xdc) ins
+          val (bytes, ins'') = S.inputN (ins', 2)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          unpackArray u length ins
+        end
+      fun unpackArray32 u ins = 
+        let
+          val ins' = expect (Word8.fromInt 0xdd) ins
+          val (bytes, ins'') = S.inputN (ins', 4)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          unpackArray u length ins
+        end
+    in
+      fun unpackList u ins = (
+           unpackFixArray u
+        || unpackArray16 u
+        || unpackArray32 u
+      ) ins
+    end
  
     fun unpackPair (u1, u2) ins =
       let
