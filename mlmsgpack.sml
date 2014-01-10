@@ -223,7 +223,9 @@ functor MessagePack(structure S : sig
   
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
 
-    val unpackList : 'a unpacker -> 'a list unpacker
+    val unpackList   : 'a unpacker -> 'a list unpacker
+    val unpackVector : 'a unpacker -> 'a vector unpacker
+    val unpackArray  : 'a unpacker -> 'a array unpacker
 
     val unpackPair : 'a unpacker * 'b unpacker -> ('a * 'b) unpacker
     val unpackTuple3 : 'a unpacker * 'b unpacker * 'c unpacker -> ('a * 'b * 'c) unpacker
@@ -467,7 +469,7 @@ end = struct
           val (bytes, ins'') = S.inputN (ins', 2)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
-          unpackArray u length ins
+          unpackArray u length ins''
         end
       fun unpackArray32 u ins = 
         let
@@ -475,7 +477,7 @@ end = struct
           val (bytes, ins'') = S.inputN (ins', 4)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
-          unpackArray u length ins
+          unpackArray u length ins''
         end
     in
       fun unpackList u ins = (
@@ -483,12 +485,22 @@ end = struct
         || unpackArray16 u
         || unpackArray32 u
       ) ins
+
+      fun unpackVector u ins =
+        let val (list, ins') = unpackList u ins in
+          (Vector.fromList list, ins')
+        end
+
+      fun unpackArray u ins =
+        let val (list, ins') = unpackList u ins in 
+          (Array.fromList list, ins')
+        end
     end
  
     fun unpackPair (u1, u2) ins =
       let
         val ins0 = expect (fixArray 2) ins
-        val (v1, ins1) = u1 ins
+        val (v1, ins1) = u1 ins0
         val (v2, ins2) = u2 ins1
       in
         ((v1, v2), ins2)
@@ -497,7 +509,7 @@ end = struct
     fun unpackTuple3 (u1, u2, u3) ins =
       let
         val ins0 = expect (fixArray 3) ins
-        val (v1, ins1) = u1 ins
+        val (v1, ins1) = u1 ins0
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
       in
@@ -507,7 +519,7 @@ end = struct
     fun unpackTuple4 (u1, u2, u3, u4) ins =
       let
         val ins0 = expect (fixArray 4) ins
-        val (v1, ins1) = u1 ins
+        val (v1, ins1) = u1 ins0
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
         val (v4, ins4) = u4 ins3
@@ -518,7 +530,7 @@ end = struct
     fun unpackTuple5 (u1, u2, u3, u4, u5) ins =
       let
         val ins0 = expect (fixArray 5) ins
-        val (v1, ins1) = u1 ins
+        val (v1, ins1) = u1 ins0
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
         val (v4, ins4) = u4 ins3
@@ -530,7 +542,7 @@ end = struct
     fun unpackTuple6 (u1, u2, u3, u4, u5, u6) ins =
       let
         val ins0 = expect (fixArray 6) ins
-        val (v1, ins1) = u1 ins
+        val (v1, ins1) = u1 ins0
         val (v2, ins2) = u2 ins1
         val (v3, ins3) = u3 ins2
         val (v4, ins4) = u4 ins3
@@ -561,10 +573,10 @@ end = struct
           SOME (byte, ins') => if pred byte then (f byte, ins') else raise Unpack
         | NONE => raise Unpack
       fun unpackPositiveFixnum f ins = unpackFixnum isPositiveFixnum f ins
-      fun unpackNegativeFixnum f ins = unpackFixnum isPositiveFixnum f ins
+      fun unpackNegativeFixnum f ins = unpackFixnum isNegativeFixnum f ins
   
       val unpackCategory1 = unpackFixnum
-  
+ 
       fun unpackCategory2 pred f ins =
         case S.input1 ins of
           SOME (byte, ins') =>
@@ -596,7 +608,7 @@ end = struct
         end
       fun unpackInt ins = (
            unpackPositiveFixnum Word8.toInt
-        || unpackNegativeFixnum Word8.toInt
+        || unpackNegativeFixnum Word8.toIntX
         || unpackUint8  (fn bytes => Word8.toInt  (Word8Vector.sub (bytes, 0)))
         || unpackInt8   (fn bytes => Word8.toIntX (Word8Vector.sub (bytes, 0)))
         || unpackUint16 UintScannerInt.scan
@@ -679,9 +691,9 @@ structure MessagePackIntListIO = MessagePack(structure S = IntListIO)
 
 structure PackTest = struct
   open MessagePackIntListIO.Pack
-  fun doPack p i =
+  fun doPack p value =
     let val outs = IntListIO.mkOutstream () in
-      pack p i outs;
+      pack p value outs;
       IntListIO.toList outs
     end
   
@@ -758,6 +770,92 @@ structure PackTest = struct
       val true = doPack (packArray packInt) (Array.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)
       val true = doPack (packArray packInt) (Array.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)
 
+    in
+      ()
+    end
+end
+
+structure UnpackTest = struct
+  open MessagePackIntListIO.Unpack
+
+  fun doUnpack u ins =
+    let val (value, _) = unpack u ins in
+      value
+    end
+
+  infix 4 <?
+  fun (precision <? n) =
+    case precision of
+      NONE => false
+    | SOME p => p < n
+
+  fun doIt () =
+    let
+      val true = doUnpack unpackInt [0] = 0
+      val true = doUnpack unpackInt [127] = 127(* max positive fixnum *)
+      val true = doUnpack unpackInt [0xcc, 128] = 128
+      val true = doUnpack unpackInt [0xcc, 255] = 0xff (* max uint 8 *)
+
+      val true = doUnpack unpackInt [0xcd, 0x01, 0x00] = 0x100 
+      val true = doUnpack unpackInt [0xcd, 0xff, 0xff] = 0xffff (* max uint 16 *)
+
+      val true = doUnpack unpackInt [0xce, 0x00, 0x01, 0x00, 0x00] = 0x10000 
+      val true = doUnpack unpackInt [0xce, 0x3f, 0xff, 0xff, 0xff] = 0x3fffffff (* max int 31 *)
+      val true = Int.precision <? 32 orelse doUnpack unpackInt [0xce, 0x7f, 0xff, 0xff, 0xff] = (0x7fff * 0x10000 + 0xffff) (* max int 32 *)
+      val true = Int.precision <? 33 orelse doUnpack unpackInt [0xce, 0xff, 0xff, 0xff, 0xff] = (0xffff * 0x10000 + 0xffff) (* max uint 32 *)
+
+      val true = Int.precision <? 34 orelse doUnpack unpackInt [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00] = (0xffff * 0x10000 + 0xffff + 1)
+      val true = Int.precision <? 63 orelse doUnpack unpackInt [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max int 63 *)
+      val true = Int.precision <? 64 orelse doUnpack unpackInt [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max int 64 *)
+      val true = Int.precision <? 65 orelse doUnpack unpackInt [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max uint 64 *)
+
+      val true = doUnpack unpackInt [0xff] = ~1 
+      val true = doUnpack unpackInt [0xe0] = ~32 (* min negative fixnum *)
+      val true = doUnpack unpackInt [0xd0, 0xdf] = ~33 
+      val true = doUnpack unpackInt [0xd0, 0x80] = ~128 (* min int 8 *)
+
+      val true = doUnpack unpackInt [0xd1, 0xff, 0x7f] = ~129 
+      val true = doUnpack unpackInt [0xd1, 0x80, 0x00] = ~32768 (* min int 16 *)
+
+      val true = doUnpack unpackInt [0xd2, 0xff, 0xff, 0x7f, 0xff] = ~32769 
+      val true = doUnpack unpackInt [0xd2, 0xc0, 0x00, 0x00, 0x00] = ~1073741824 (* min int 31 *)
+      val true = Int.precision <? 32 orelse doUnpack unpackInt [0xd2, 0x80, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000) (* ~2147483648 *) (* min int 32 *)
+
+      val true = Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff] = (~0x8000 * 0x10000 - 1) (* ~2147483649 *) 
+      val true = Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) (* min int 64 *)
+
+      val true = doUnpack unpackUnit [0xc0] = () 
+      val true = doUnpack unpackBool [0xc2] = false 
+      val true = doUnpack unpackBool [0xc3] = true 
+
+      val true = doUnpack (unpackPair (unpackInt, unpackInt)) [0x92, 1, 2] = (1, 2) 
+      val true = doUnpack (unpackPair (unpackInt, unpackInt)) [0x92, 1, 0xcc, 128] = (1, 128) 
+      val true = doUnpack (unpackPair (unpackInt, unpackBool)) [0x92, 0xcc, 128, 0xc3] = (128, true) 
+      val true = doUnpack (unpackPair (unpackInt, unpackPair (unpackInt, unpackInt))) [0x92, 1, 0x92, 2, 3] = (1, (2, 3)) 
+      val true = doUnpack (unpackTuple3 (unpackInt, unpackInt, unpackInt)) [0x93, 1, 2, 3] = (1, 2, 3) 
+      val true = doUnpack (unpackTuple4 (unpackInt, unpackInt, unpackInt, unpackInt)) [0x94, 1, 2, 3, 4] = (1, 2, 3, 4) 
+      val true = doUnpack (unpackTuple5 (unpackInt, unpackInt, unpackInt, unpackInt, unpackInt)) [0x95, 1, 2, 3, 4, 5] = (1, 2, 3, 4, 5) 
+      val true = doUnpack (unpackTuple6 (unpackInt, unpackInt, unpackInt, unpackInt, unpackInt, unpackInt)) [0x96, 1, 2, 3, 4, 5, 6] = (1, 2, 3, 4, 5, 6) 
+
+      val true = doUnpack (unpackList unpackInt) [0x90] = []
+      val true = doUnpack (unpackList unpackInt) [0x91, 0] = [0]
+      val true = doUnpack (unpackList unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (List.tabulate (15, fn n => n)) 
+      val true = doUnpack (unpackList unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (List.tabulate (65535, fn _ => 1)) 
+      val true = doUnpack (unpackList unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (List.tabulate (65536, fn _ => 1)) 
+
+      val true = doUnpack (unpackVector unpackInt) [0x90] = (Vector.tabulate (0, fn n => n)) 
+      val true = doUnpack (unpackVector unpackInt) [0x91, 0] = (Vector.tabulate (1, fn n => n)) 
+      val true = doUnpack (unpackVector unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (Vector.tabulate (15, fn n => n)) 
+      val true = doUnpack (unpackVector unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Vector.tabulate (65535, fn _ => 1)) 
+      val true = doUnpack (unpackVector unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Vector.tabulate (65536, fn _ => 1)) 
+
+(*
+      val true = doUnpack (unpackArray unpackInt) [0x90] = (Array.tabulate (0, fn n => n)) 
+      val true = doUnpack (unpackArray unpackInt) [0x91, 0] = (Array.tabulate (1, fn n => n)) 
+      val true = doUnpack (unpackArray unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (Array.tabulate (15, fn n => n)) 
+      val true = doUnpack (unpackArray unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Array.tabulate (65535, fn _ => 1)) 
+      val true = doUnpack (unpackArray unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Array.tabulate (65536, fn _ => 1)) 
+*)
     in
       ()
     end
