@@ -190,6 +190,40 @@ end = struct
     end
 end
 
+functor BitScanner(structure I : I;
+                   val toInt : Word8.word -> I.int) :> sig
+  val scan : int -> int -> Word8Vector.vector -> I.int
+end = struct
+  val fromWordToI = I.fromLarge o Word.toLargeInt
+  fun scan from length bytes =
+    let
+      fun scan from length i bits =
+  (*      (print ("from "^Int.toString from^"\n");
+        print ("length "^Int.toString length^"\n");
+        print ("i "^Int.toString i^"\n");
+        print ("bits "^Int.toString bits^"\n");
+        print ("=\n"); *)
+        if from >= 8 then scan (from - 8) length (i + 1) bits
+        else
+          let
+            val byte = Word8Vector.sub (bytes, i)
+            val mask = Word8.>> (Word8.fromInt 0xff, Word.fromInt from)
+            val byte' = Word8.andb (byte, mask) (* omit leading bis *)
+          in
+           if (length > 8 - from) then
+             scan 0 (length - (8 - from)) (i + 1) (I.+ (I.* (bits, I.fromInt 0x100), toInt byte'))
+           else
+             let val lshift = fromWordToI (Word.<< (Word.fromInt 1, Word.fromInt length)) in
+               I.+ (I.* (bits, lshift), toInt (Word8.>> (byte', Word.fromInt (8 - from - length))))
+             end
+          end
+  (* ) *)
+    in
+      scan from length 0 (I.fromInt 0)
+    end
+end
+
+
 functor MessagePack(structure S : sig
                       type instream
                       type outstream
@@ -241,6 +275,7 @@ functor MessagePack(structure S : sig
     val unpackBool : bool unpacker
     val unpackInt : int unpacker
     val unpackLargeInt : LargeInt.int unpacker
+    val unpackReal : real unpacker
     val unpackBytes : Word8Vector.vector unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
@@ -281,6 +316,9 @@ end = struct
   structure IntPrinterIntWord = UintPrinterIntWord
   structure IntPrinterIntLargeWord = UintPrinterIntLargeWord
   structure IntPrinterInfInt = UintPrinterInfInt
+
+  structure BitScannerInt = BitScanner(structure I = Int; val toInt = Word8.toInt)
+  structure BitScannerLargeInt = BitScanner(structure I = LargeInt; val toInt = Word8.toLargeInt)
 
   structure IntMP = struct
     datatype int = Int of Int.int
@@ -597,6 +635,8 @@ end = struct
       fun isInt16  byte = byte = Word8.fromInt 0xd1
       fun isInt32  byte = byte = Word8.fromInt 0xd2
       fun isInt64  byte = byte = Word8.fromInt 0xd3
+      fun isFloat  byte = byte = Word8.fromInt 0xca
+      fun isDouble byte = byte = Word8.fromInt 0xcb
 
       val fromWord8toWord = Word.fromLargeWord o Word8.toLargeWord
   
@@ -629,6 +669,32 @@ end = struct
       fun unpackInt16  f ins = unpackCategory2 isInt16  f ins
       fun unpackInt32  f ins = unpackCategory2 isInt32  f ins
       fun unpackInt64  f ins = unpackCategory2 isInt64  f ins
+     
+      fun scanFloat bytes =
+        let
+          val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
+          val exponent = Real.fromInt (BitScannerInt.scan 1 8 bytes - 127)
+          val extraBit = 0x800000
+          val significand = Real.fromInt (BitScannerInt.scan 9 23 bytes + extraBit) * Math.pow(2.0, ~23.0)
+        in
+          (* print ("sign="^Real.toString sign^"\n");
+          print ("exponent="^Real.toString exponent^"\n");
+          print ("significand="^Real.toString significand^"\n"); *)
+          sign * significand * Math.pow(2.0, exponent)
+        end
+      fun scanDouble bytes =
+        let
+          val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
+          val exponent = Real.fromInt (BitScannerInt.scan 1 11 bytes - 1023)
+          val extraBit = (LargeInt.fromInt 0x10) * (LargeInt.fromInt 0x10000) * (LargeInt.fromInt 0x10000) * (LargeInt.fromInt 0x10000)
+          val significand = Real.fromLargeInt (BitScannerLargeInt.scan 9 23 bytes + extraBit) * Math.pow (2.0, ~52.0)
+          (* these computations will overflow if LargeInt.precision <= 53 *)
+        in
+          sign * significand * Math.pow(2.0, exponent)
+        end
+
+      fun unpackFloat  ins = unpackCategory2 isFloat  scanFloat  ins
+      fun unpackDouble ins = unpackCategory2 isDouble scanDouble ins
     in
       fun unpackUnit ins = unpackCategory1 (fn byte => byte = Word8.fromInt 0xc0) (fn _ => ()) ins
       fun unpackBool ins =
@@ -661,6 +727,11 @@ end = struct
         || unpackInt32   IntScannerLargeIntLargeWord.scan
         || unpackUint64 UintScannerLargeInt.scan
         || unpackInt64   IntScannerLargeIntLargeWord.scan
+      ) ins
+
+      fun unpackReal ins = (
+           unpackDouble
+        || unpackFloat
       ) ins
     end
 
@@ -888,6 +959,8 @@ structure UnpackTest = struct
 
       val true = Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff] = (~0x8000 * 0x10000 - 1) (* ~2147483649 *) 
       val true = Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) (* min int 64 *)
+
+      val true = Real.toString (doUnpack unpackReal [0xca, 0xc2, 0xed, 0x40, 0x00]) = "~118.625"
 
       val true = doUnpack unpackUnit [0xc0] = () 
       val true = doUnpack unpackBool [0xc2] = false 
