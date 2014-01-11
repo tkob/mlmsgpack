@@ -195,6 +195,7 @@ functor MessagePack(structure S : sig
                       type outstream
                       val input1 : instream -> (Word8.word * instream) option
                       val inputN : instream * int -> Word8Vector.vector * instream
+                      val output : outstream * Word8Vector.vector -> unit
                       val output1 : outstream * Word8.word -> unit
                     end) :> sig
   structure Pack : sig
@@ -215,6 +216,9 @@ functor MessagePack(structure S : sig
     val packUnit   : unit packer
     val packBool   : bool packer
     val packInt    : int packer
+    val packBytes  : Word8Vector.vector packer
+
+    val packOption : 'a packer -> 'a option packer
   end
   structure Unpack : sig
     type 'a unpacker
@@ -237,9 +241,9 @@ functor MessagePack(structure S : sig
     val unpackBool : bool unpacker
     val unpackInt : int unpacker
     val unpackLargeInt : LargeInt.int unpacker
+    val unpackBytes : Word8Vector.vector unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
-    val unpackNillable : 'a unpacker -> 'a option unpacker
   end
 end = struct
   structure UintScannerInt = UintScanner(Int)
@@ -419,6 +423,34 @@ end = struct
           else
             raise Overflow
     end
+    fun packBytes bytes outs =
+      let val length = Word8Vector.length bytes in
+        if length < 32 then
+          (* FixRaw *)
+          S.output1 (outs, (Word8.orb (Word8.fromInt 0xa0, Word8.fromInt length)))
+        else if length div 0x10000 = 0 then
+          (* raw 16 *)
+          (S.output1 (outs, Word8.fromInt 0xda);
+          UintPrinterIntWord.print length 2 outs)
+        else if length div 0x10000 div 0x10000 = 0 then
+          (* raw 32 *)
+          (S.output1 (outs, Word8.fromInt 0xdb);
+          if Word.wordSize >= 32 then
+            UintPrinterIntWord.print length 4 outs
+          else if LargeWord.wordSize >= 32 then
+            UintPrinterIntLargeWord.print length 4 outs
+          else
+            UintPrinterInfInt.print length 4 outs)
+        else
+          raise Size;
+        S.output (outs, bytes)
+      end
+
+    fun packOption p option outs =
+      case option of 
+        SOME value => p value outs
+      | NONE => packUnit () outs
+
   end
 
   structure Unpack = struct
@@ -632,10 +664,41 @@ end = struct
       ) ins
     end
 
-    fun unpackOption u ins =
-      (u >> SOME || (fn ins => (NONE, ins))) ins
+    local
+      fun unpackRaw length ins = S.inputN (ins, length)
+      fun isFixRaw byte = Word8.andb (byte, Word8.fromInt 0xe0) = Word8.fromInt 0xa0
+      fun lengthOfFixRaw byte = Word8.toInt (Word8.andb (byte, Word8.fromInt 0x1f))
+      fun unpackFixRaw ins =
+        case S.input1 ins of
+          SOME (byte, ins')
+            => if isFixRaw byte then unpackRaw (lengthOfFixRaw byte) ins'
+               else raise Unpack
+        | NONE => raise Unpack
+      fun unpackRaw16 ins = 
+        let
+          val ins' = expect (Word8.fromInt 0xda) ins
+          val (bytes, ins'') = S.inputN (ins', 2)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          unpackRaw length ins''
+        end
+      fun unpackRaw32 ins = 
+        let
+          val ins' = expect (Word8.fromInt 0xdb) ins
+          val (bytes, ins'') = S.inputN (ins', 4)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          unpackRaw length ins''
+        end
+    in
+      fun unpackBytes ins = (
+           unpackFixRaw
+        || unpackRaw16
+        || unpackRaw32
+      ) ins
+    end
 
-    fun unpackNillable u ins =
+    fun unpackOption u ins =
       (u >> SOME || unpackUnit >> (fn () => NONE)) ins
   
   end
@@ -681,6 +744,8 @@ structure IntListIO = struct
     end
   fun output1 (outs, byte) =
     outs := (Word8.toInt byte)::(!outs)
+  fun output (outs, bytes) =
+    Word8Vector.app (fn byte => output1 (outs, byte)) bytes
   fun toList outs = List.rev (!outs)
   fun mkOutstream () : outstream = ref []
 end
@@ -861,3 +926,29 @@ structure UnpackTest = struct
     end
 end
 
+(*
+fun main () = 
+  let
+    fun showPrecision (SOME precision) = Int.toString precision
+      | showPrecision NONE = "infinite"
+    val intPrecision = showPrecision Int.precision
+    val largeIntPrecision = showPrecision LargeInt.precision
+    val wordSize = Int.toString Word.wordSize
+    val largeWordSize = Int.toString LargeWord.wordSize
+(*    val realPrecision = Int.toString Real.precision
+    val largeRealPrecision = Int.toString LargeReal.precision *)
+    fun println s = print (s ^ "\n")
+  in
+    println ("Int.precision       = " ^ intPrecision);
+    println ("LargeInt.precision  = " ^ largeIntPrecision);
+    println ("Word.wordSize       = " ^ wordSize);
+    println ("LargeWord.wordSize  = " ^ largeWordSize);
+(*    println ("Real.precision      = " ^ realPrecision);
+    println ("LargeReal.precision = " ^ largeRealPrecision); *)
+    PackTest.doIt ();
+    UnpackTest.doIt ();
+    println "done."
+  end;
+
+val _ = main ()
+*)
