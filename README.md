@@ -12,7 +12,7 @@ Features
 Status
 ------
 
-Not complete. Some MessagePack data types are not implemented yet.
+Not complete. Float and Map are not implemented yet.
 
 See Also
 --------
