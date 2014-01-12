@@ -123,19 +123,19 @@ end = struct
   fun reverse int n =
     let
       val word = fromIToW int
-      fun loop from to n =
+      fun loop src dest n =
         let
           val n' = n - 1
-          val byte = W.andb (from, W.fromInt 0xff)
-          val to' = W.orb (to, byte)
+          val byte = W.andb (src, W.fromInt 0xff)
+          val dest' = W.orb (dest, byte)
         in
-          if n' = 0 then to'
+          if n' = 0 then dest'
           else
             let
-              val from' = W.>> (from, 0w8)
-              val to'' = W.<< (to', 0w8)
+              val src' = W.>> (src, 0w8)
+              val dest'' = W.<< (dest', 0w8)
             in
-              loop from' to'' n'
+              loop src' dest'' n'
             end
         end
     in
@@ -195,31 +195,31 @@ functor BitScanner(structure I : I;
   val scan : int -> int -> Word8Vector.vector -> I.int
 end = struct
   val fromWordToI = I.fromLarge o Word.toLargeInt
-  fun scan from length bytes =
+  fun scan src length bytes =
     let
-      fun scan from length i bits =
-  (*      (print ("from "^Int.toString from^"\n");
+      fun scan src length i dest =
+  (*      (print ("src "^Int.toString src^"\n");
         print ("length "^Int.toString length^"\n");
         print ("i "^Int.toString i^"\n");
-        print ("bits "^Int.toString bits^"\n");
+        print ("dest "^Int.toString dest^"\n");
         print ("=\n"); *)
-        if from >= 8 then scan (from - 8) length (i + 1) bits
+        if src >= 8 then scan (src - 8) length (i + 1) dest
         else
           let
             val byte = Word8Vector.sub (bytes, i)
-            val mask = Word8.>> (0wxff, Word.fromInt from)
+            val mask = Word8.>> (0wxff, Word.fromInt src)
             val byte' = Word8.andb (byte, mask) (* omit leading bis *)
           in
-           if (length > 8 - from) then
-             scan 0 (length - (8 - from)) (i + 1) (I.+ (I.* (bits, I.fromInt 0x100), toInt byte'))
+           if (length > 8 - src) then
+             scan 0 (length - (8 - src)) (i + 1) (I.+ (I.* (dest, I.fromInt 0x100), toInt byte'))
            else
              let val lshift = fromWordToI (Word.<< (0w1, Word.fromInt length)) in
-               I.+ (I.* (bits, lshift), toInt (Word8.>> (byte', Word.fromInt (8 - from - length))))
+               I.+ (I.* (dest, lshift), toInt (Word8.>> (byte', Word.fromInt (8 - src - length))))
              end
           end
   (* ) *)
     in
-      scan from length 0 (I.fromInt 0)
+      scan src length 0 (I.fromInt 0)
     end
 end
 
@@ -638,7 +638,7 @@ end = struct
       fun isFloat  (byte : Word8.word) = byte = 0wxca
       fun isDouble (byte : Word8.word) = byte = 0wxcb
 
-      val fromWord8toWord = Word.fromLargeWord o Word8.toLargeWord
+      val fromWord8toWord = Word.fromLarge o Word8.toLarge
   
       fun unpackFixnum pred f ins =
         case S.input1 ins of
@@ -700,8 +700,8 @@ end = struct
       fun unpackUnit ins = unpackCategory1 (fn byte => byte = 0wxc0) (fn _ => ()) ins
       fun unpackBool ins =
         let
-          fun isBool byte = byte = 0wxc2 orelse byte = 0wxc3
-          fun toBool byte = byte = 0wxc3
+          fun isBool (byte : Word8.word) = byte = 0wxc2 orelse byte = 0wxc3
+          fun toBool (byte : Word8.word) = byte = 0wxc3
         in
           unpackCategory1 isBool toBool ins
         end
