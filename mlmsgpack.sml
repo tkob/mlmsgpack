@@ -75,11 +75,11 @@ end = struct
   fun scan bytes =
     let
       val length = Word8Vector.length bytes
-      val isMinus = Word8Vector.sub (bytes, 0) >= Word8.fromInt 0x80
+      val isMinus = Word8Vector.sub (bytes, 0) >= 0wx80
       fun loop index mask value =
         let
           val index' = index + 1
-          val mask' = W.<< (mask, Word.fromInt 8)
+          val mask' = W.<< (mask, 0w8)
           val msb = fromWord8ToW (Word8Vector.sub (bytes, index))
           val sum = W.+ (value, msb)
         in
@@ -132,8 +132,8 @@ end = struct
           if n' = 0 then to'
           else
             let
-              val from' = W.>> (from, Word.fromInt 8)
-              val to'' = W.<< (to', Word.fromInt 8)
+              val from' = W.>> (from, 0w8)
+              val to'' = W.<< (to', 0w8)
             in
               loop from' to'' n'
             end
@@ -149,7 +149,7 @@ end = struct
         else
           let
             val byte = fromWToWord8 word
-            val word' = W.>> (word, Word.fromInt 8)
+            val word' = W.>> (word, 0w8)
           in
             S.output1 (outs, byte);
             loop word' (n - 1)
@@ -207,13 +207,13 @@ end = struct
         else
           let
             val byte = Word8Vector.sub (bytes, i)
-            val mask = Word8.>> (Word8.fromInt 0xff, Word.fromInt from)
+            val mask = Word8.>> (0wxff, Word.fromInt from)
             val byte' = Word8.andb (byte, mask) (* omit leading bis *)
           in
            if (length > 8 - from) then
              scan 0 (length - (8 - from)) (i + 1) (I.+ (I.* (bits, I.fromInt 0x100), toInt byte'))
            else
-             let val lshift = fromWordToI (Word.<< (Word.fromInt 1, Word.fromInt length)) in
+             let val lshift = fromWordToI (Word.<< (0w1, Word.fromInt length)) in
                I.+ (I.* (bits, lshift), toInt (Word8.>> (byte', Word.fromInt (8 - from - length))))
              end
           end
@@ -330,7 +330,7 @@ end = struct
                  | Word8VectorSlice of Word8VectorSlice.slice
   end
 
-  fun fixArray length = Word8.orb (Word8.fromInt 0x90, Word8.fromInt length)
+  fun fixArray length = Word8.orb (0wx90, Word8.fromInt length)
 
   structure Pack = struct
     exception Pack
@@ -354,11 +354,11 @@ end = struct
             outputFixArray length outs
           else if length < 0x10000 then
             (* array 16 *)
-            (S.output1 (outs, Word8.fromInt 0xdc);
+            (S.output1 (outs, 0wxdc);
             UintPrinterIntWord.print length 2 outs)
           else if length div 0x10000 div 0x10000 = 0 then
             (* array 32 *)
-            (S.output1 (outs, Word8.fromInt 0xdd);
+            (S.output1 (outs, 0wxdd);
             if Word.wordSize >= 32 then
               UintPrinterIntWord.print length 4 outs
             else if LargeWord.wordSize >= 32 then
@@ -390,10 +390,10 @@ end = struct
         (outputFixArray 6 outs;
         p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs; p5 v5 outs; p6 v6 outs)
 
-      fun packUnit () outs = S.output1 (outs, Word8.fromInt 0xc0)
+      fun packUnit () outs = S.output1 (outs, 0wxc0)
       fun packBool bool outs =
-        if bool then S.output1 (outs, Word8.fromInt 0xc3)
-                else S.output1 (outs, Word8.fromInt 0xc2)
+        if bool then S.output1 (outs, 0wxc3)
+                else S.output1 (outs, 0wxc2)
   
       fun packInt int outs = 
         if (int >= 0   andalso int <= 127) orelse
@@ -403,15 +403,15 @@ end = struct
           (* positive *)
           if int < 0x100 then
             (* uint 8 *)
-            (S.output1 (outs, Word8.fromInt 0xcc);
+            (S.output1 (outs, 0wxcc);
             S.output1 (outs, Word8.fromInt int))
           else if int < 0x10000 then
             (* uint 16 *)
-            (S.output1 (outs, Word8.fromInt 0xcd);
+            (S.output1 (outs, 0wxcd);
             UintPrinterIntWord.print int 2 outs)
           else if int div 0x10000 div 0x10000 = 0 then
             (* uint 32 *)
-            (S.output1 (outs, Word8.fromInt 0xce);
+            (S.output1 (outs, 0wxce);
             if Word.wordSize >= 32 then
               UintPrinterIntWord.print int 4 outs
             else if LargeWord.wordSize >= 32 then
@@ -421,7 +421,7 @@ end = struct
               UintPrinterInfInt.print int 4 outs)
           else if int div 0x10000 div 0x10000 div 0x10000 div 0x10000 = 0 then
             (* uint 64 *)
-            (S.output1 (outs, Word8.fromInt 0xcf);
+            (S.output1 (outs, 0wxcf);
             if Word.wordSize >= 64 then
               UintPrinterIntWord.print int 8 outs
             else if LargeWord.wordSize >= 64 then
@@ -434,15 +434,15 @@ end = struct
           (* negative *)
           if int >= ~128 then
             (* int 8 *)
-            (S.output1 (outs, Word8.fromInt 0xd0);
+            (S.output1 (outs, 0wxd0);
             S.output1 (outs, Word8.fromInt int))
           else if int >= ~32768 then
             (* int 16 *)
-            (S.output1 (outs, Word8.fromInt 0xd1);
+            (S.output1 (outs, 0wxd1);
             IntPrinterIntWord.print int 2 outs)
           else if int div 0x8000 div 0x10000 = ~1 then
             (* int 32 *)
-            (S.output1 (outs, Word8.fromInt 0xd2);
+            (S.output1 (outs, 0wxd2);
             if Word.wordSize >= 32 then
               IntPrinterIntWord.print int 4 outs
             else if LargeWord.wordSize >= 32 then
@@ -451,7 +451,7 @@ end = struct
               IntPrinterInfInt.print int 4 outs)
           else if int div 0x8000 div 0x10000 div 0x10000 div 0x10000 = ~1 then
             (* int 64 *)
-            (S.output1 (outs, Word8.fromInt 0xd3);
+            (S.output1 (outs, 0wxd3);
             if Word.wordSize >= 64 then
               IntPrinterIntWord.print int 8 outs
             else if LargeWord.wordSize >= 64 then
@@ -465,14 +465,14 @@ end = struct
       let val length = Word8Vector.length bytes in
         if length < 32 then
           (* FixRaw *)
-          S.output1 (outs, (Word8.orb (Word8.fromInt 0xa0, Word8.fromInt length)))
+          S.output1 (outs, (Word8.orb (0wxa0, Word8.fromInt length)))
         else if length div 0x10000 = 0 then
           (* raw 16 *)
-          (S.output1 (outs, Word8.fromInt 0xda);
+          (S.output1 (outs, 0wxda);
           UintPrinterIntWord.print length 2 outs)
         else if length div 0x10000 div 0x10000 = 0 then
           (* raw 32 *)
-          (S.output1 (outs, Word8.fromInt 0xdb);
+          (S.output1 (outs, 0wxdb);
           if Word.wordSize >= 32 then
             UintPrinterIntWord.print length 4 outs
           else if LargeWord.wordSize >= 32 then
@@ -525,8 +525,8 @@ end = struct
         in
           loop ins length []
         end
-      fun isFixArray byte = Word8.andb (byte, Word8.fromInt 0xf0) = Word8.fromInt 0x90
-      fun lengthOfFixArray byte = Word8.toInt (Word8.andb (byte, Word8.fromInt 0x0f))
+      fun isFixArray byte = Word8.andb (byte, 0wxf0) = 0wx90
+      fun lengthOfFixArray byte = Word8.toInt (Word8.andb (byte, 0wx0f))
       fun unpackFixArray u ins =
         case S.input1 ins of
           SOME (byte, ins')
@@ -535,7 +535,7 @@ end = struct
         | NONE => raise Unpack
       fun unpackArray16 u ins = 
         let
-          val ins' = expect (Word8.fromInt 0xdc) ins
+          val ins' = expect 0wxdc ins
           val (bytes, ins'') = S.inputN (ins', 2)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
@@ -543,7 +543,7 @@ end = struct
         end
       fun unpackArray32 u ins = 
         let
-          val ins' = expect (Word8.fromInt 0xdd) ins
+          val ins' = expect 0wxdd ins
           val (bytes, ins'') = S.inputN (ins', 4)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
@@ -623,20 +623,20 @@ end = struct
       end
   
     local 
-      fun isPositiveFixnum byte =
-        byte >= Word8.fromInt 0x00 andalso byte <= Word8.fromInt 0x7f 
-      fun isNegativeFixnum byte = 
-        byte >= Word8.fromInt 0xe0 andalso byte <= Word8.fromInt 0xff 
-      fun isUint8  byte = byte = Word8.fromInt 0xcc
-      fun isUint16 byte = byte = Word8.fromInt 0xcd
-      fun isUint32 byte = byte = Word8.fromInt 0xce
-      fun isUint64 byte = byte = Word8.fromInt 0xcf
-      fun isInt8   byte = byte = Word8.fromInt 0xd0
-      fun isInt16  byte = byte = Word8.fromInt 0xd1
-      fun isInt32  byte = byte = Word8.fromInt 0xd2
-      fun isInt64  byte = byte = Word8.fromInt 0xd3
-      fun isFloat  byte = byte = Word8.fromInt 0xca
-      fun isDouble byte = byte = Word8.fromInt 0xcb
+      fun isPositiveFixnum (byte : Word8.word) =
+        byte >= 0wx00 andalso byte <= 0wx7f 
+      fun isNegativeFixnum (byte : Word8.word) = 
+        byte >= 0wxe0 andalso byte <= 0wxff 
+      fun isUint8  (byte : Word8.word) = byte = 0wxcc
+      fun isUint16 (byte : Word8.word) = byte = 0wxcd
+      fun isUint32 (byte : Word8.word) = byte = 0wxce
+      fun isUint64 (byte : Word8.word) = byte = 0wxcf
+      fun isInt8   (byte : Word8.word) = byte = 0wxd0
+      fun isInt16  (byte : Word8.word) = byte = 0wxd1
+      fun isInt32  (byte : Word8.word) = byte = 0wxd2
+      fun isInt64  (byte : Word8.word) = byte = 0wxd3
+      fun isFloat  (byte : Word8.word) = byte = 0wxca
+      fun isDouble (byte : Word8.word) = byte = 0wxcb
 
       val fromWord8toWord = Word.fromLargeWord o Word8.toLargeWord
   
@@ -654,7 +654,7 @@ end = struct
           SOME (byte, ins') =>
             if pred byte then
               let
-                val length = Word8.toInt (Word8.<< (Word8.fromInt 1, fromWord8toWord (Word8.andb (byte, Word8.fromInt 0x03))))
+                val length = Word8.toInt (Word8.<< (0w1, fromWord8toWord (Word8.andb (byte, 0wx03))))
                 val (bytes, ins'') = S.inputN (ins', length)
               in
                 (f bytes, ins'')
@@ -674,7 +674,7 @@ end = struct
         let
           val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
           val exponent = Real.fromInt (BitScannerInt.scan 1 8 bytes - 127)
-          val extraBit = 0x800000
+          val extraBit = 0x800000 (* 1 << 23 *)
           val significand = Real.fromInt (BitScannerInt.scan 9 23 bytes + extraBit) * Math.pow(2.0, ~23.0)
         in
           (* print ("sign="^Real.toString sign^"\n");
@@ -686,7 +686,7 @@ end = struct
         let
           val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
           val exponent = Real.fromInt (BitScannerInt.scan 1 11 bytes - 1023)
-          val extraBit = 0x4000000
+          val extraBit = 0x4000000 (* 1 << 26 *)
           val significandH = Real.fromInt (BitScannerInt.scan 12 26 bytes + extraBit) * Math.pow (2.0, ~26.0)
           val significandL = Real.fromInt (BitScannerInt.scan 38 26 bytes) * Math.pow (2.0, ~52.0)
           val significand = significandH + significandL
@@ -697,11 +697,11 @@ end = struct
       fun unpackFloat  ins = unpackCategory2 isFloat  scanFloat  ins
       fun unpackDouble ins = unpackCategory2 isDouble scanDouble ins
     in
-      fun unpackUnit ins = unpackCategory1 (fn byte => byte = Word8.fromInt 0xc0) (fn _ => ()) ins
+      fun unpackUnit ins = unpackCategory1 (fn byte => byte = 0wxc0) (fn _ => ()) ins
       fun unpackBool ins =
         let
-          fun isBool byte = byte = Word8.fromInt 0xc2 orelse byte = Word8.fromInt 0xc3
-          fun toBool byte = byte = Word8.fromInt 0xc3
+          fun isBool byte = byte = 0wxc2 orelse byte = 0wxc3
+          fun toBool byte = byte = 0wxc3
         in
           unpackCategory1 isBool toBool ins
         end
@@ -738,8 +738,8 @@ end = struct
 
     local
       fun unpackRaw length ins = S.inputN (ins, length)
-      fun isFixRaw byte = Word8.andb (byte, Word8.fromInt 0xe0) = Word8.fromInt 0xa0
-      fun lengthOfFixRaw byte = Word8.toInt (Word8.andb (byte, Word8.fromInt 0x1f))
+      fun isFixRaw byte = Word8.andb (byte, 0wxe0) = 0wxa0
+      fun lengthOfFixRaw byte = Word8.toInt (Word8.andb (byte, 0wx1f))
       fun unpackFixRaw ins =
         case S.input1 ins of
           SOME (byte, ins')
@@ -748,7 +748,7 @@ end = struct
         | NONE => raise Unpack
       fun unpackRaw16 ins = 
         let
-          val ins' = expect (Word8.fromInt 0xda) ins
+          val ins' = expect 0wxda ins
           val (bytes, ins'') = S.inputN (ins', 2)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
@@ -756,7 +756,7 @@ end = struct
         end
       fun unpackRaw32 ins = 
         let
-          val ins' = expect (Word8.fromInt 0xdb) ins
+          val ins' = expect 0wxdb ins
           val (bytes, ins'') = S.inputN (ins', 4)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
