@@ -35,7 +35,7 @@ end
 
 (* 
   requirement:
-    Int.precision >= 16 andalso Word.wordSize >= 16
+    Int.precision >= 28 andalso Word.wordSize >= 16
 *)
 val true = case Int.precision of
              SOME p => p >= 28
