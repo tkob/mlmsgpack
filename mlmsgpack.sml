@@ -38,7 +38,7 @@ end
     Int.precision >= 16 andalso Word.wordSize >= 16
 *)
 val true = case Int.precision of
-             SOME p => p >= 16
+             SOME p => p >= 28
            | NONE => true
            andalso Word.wordSize >= 16
 
@@ -686,9 +686,10 @@ end = struct
         let
           val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
           val exponent = Real.fromInt (BitScannerInt.scan 1 11 bytes - 1023)
-          val extraBit = (LargeInt.fromInt 0x10) * (LargeInt.fromInt 0x10000) * (LargeInt.fromInt 0x10000) * (LargeInt.fromInt 0x10000)
-          val significand = Real.fromLargeInt (BitScannerLargeInt.scan 9 23 bytes + extraBit) * Math.pow (2.0, ~52.0)
-          (* these computations will overflow if LargeInt.precision <= 53 *)
+          val extraBit = 0x4000000
+          val significandH = Real.fromInt (BitScannerInt.scan 12 26 bytes + extraBit) * Math.pow (2.0, ~26.0)
+          val significandL = Real.fromInt (BitScannerInt.scan 38 26 bytes) * Math.pow (2.0, ~52.0)
+          val significand = significandH + significandL
         in
           sign * significand * Math.pow(2.0, exponent)
         end
@@ -961,6 +962,9 @@ structure UnpackTest = struct
       val true = Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) (* min int 64 *)
 
       val true = Real.toString (doUnpack unpackReal [0xca, 0xc2, 0xed, 0x40, 0x00]) = "~118.625"
+      val true = Real.toString (doUnpack unpackReal [0xcb, 0xc0, 0x5d, 0xa8, 0x00, 0x00, 0x00, 0x00, 0x00]) = "~118.625"
+      val true = Real.toString (doUnpack unpackReal [0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea]) = "3.14159265359"
+      val true = Real.toString (doUnpack unpackReal [0xcb, 0x40, 0x05, 0xbf, 0x0a, 0x8b, 0x14, 0x5f, 0xcf]) = "2.71828182846"
 
       val true = doUnpack unpackUnit [0xc0] = () 
       val true = doUnpack unpackBool [0xc2] = false 
