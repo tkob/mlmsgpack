@@ -252,6 +252,7 @@ functor MessagePack(structure S : sig
     val packUnit   : unit packer
     val packBool   : bool packer
     val packInt    : int packer
+    val packReal   : real packer
     val packBytes  : Word8Vector.vector packer
 
     val packOption : 'a packer -> 'a option packer
@@ -464,6 +465,33 @@ end = struct
           else
             raise Overflow
     end
+
+    fun packReal real outs =
+      let
+        val {man = significand, exp = exponent} = Real.toManExp real
+        val signigicand' = Real.copySign (significand * Math.pow (2.0, 53.0), 1.0) (* packed to double *)
+        val shift = Math.pow (2.0, 24.0)
+        val siginigicandH = signigicand' / shift / shift
+        val siginigicandM = Real.rem (signigicand' / shift, shift)
+        val siginigicandL = Real.rem (signigicand', shift)
+        val siginigicandH' = Real.toInt IEEEReal.TO_ZERO siginigicandH mod 16 (* remove left-most bit *)
+        val siginigicandM' = Real.toInt IEEEReal.TO_ZERO siginigicandM
+        val siginigicandL' = Real.toInt IEEEReal.TO_ZERO siginigicandL
+        val sign = if Real.signBit real then 0x8000 (* 1 << 15 *) else 0
+        val exponent' = (exponent + 1023 - 1) * 16 (* << 4 *)
+        val h = sign + exponent' + siginigicandH'
+      in
+        print ("L=" ^ Int.toString siginigicandL' ^ "\n");
+        (* print ("sign:"^Int.toString sign^"\n");
+        print ("exponent:"^Int.toString exponent^"\n");
+        print ("exponent':"^Int.toString exponent'^"\n");
+        print ("significandH':"^Int.toString siginigicandH'^"\n"); *)
+        S.output1 (outs, word8 0wxcb);
+        UintPrinterIntWord.print h 2 outs;
+        UintPrinterIntWord.print siginigicandM' 3 outs;
+        UintPrinterIntWord.print siginigicandL' 3 outs
+      end
+
     fun packBytes bytes outs =
       let val length = Word8Vector.length bytes in
         if length < 32 then
