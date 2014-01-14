@@ -264,6 +264,7 @@ functor MessagePack(structure S : sig
   
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
 
+    val unpackArrayFold : 'a unpacker -> ('a * 'b -> 'b) -> 'b -> 'b unpacker
     val unpackList   : 'a unpacker -> 'a list unpacker
     val unpackVector : 'a unpacker -> 'a vector unpacker
     val unpackArray  : 'a unpacker -> 'a array unpacker
@@ -545,57 +546,46 @@ end = struct
       | NONE => raise Unpack
 
     local
-      fun unpackArray u length ins =
-        let
-          fun loop ins n values =
-            if n = 0 then (rev values, ins)
-            else
-              let val (value, ins') = u ins in
-                loop ins' (n - 1) (value::values)
-              end
-        in
-          loop ins length []
-        end
       fun isFixArray byte = Word8.andb (byte, word8 0wxf0) = word8 0wx90
       fun lengthOfFixArray byte = Word8.toInt (Word8.andb (byte, word8 0wx0f))
-      fun unpackFixArray u ins =
+      fun scanFixArray ins =
         case S.input1 ins of
           SOME (byte, ins')
-            => if isFixArray byte then unpackArray u (lengthOfFixArray byte) ins'
+            => if isFixArray byte then (lengthOfFixArray byte, ins')
                else raise Unpack
         | NONE => raise Unpack
-      fun unpackArray16 u ins = 
+      fun scanArray16 ins = 
         let
           val ins' = expect (word8 0wxdc) ins
           val (bytes, ins'') = S.inputN (ins', 2)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
-          unpackArray u length ins''
+          (length, ins'')
         end
-      fun unpackArray32 u ins = 
+      fun scanArray32 ins = 
         let
           val ins' = expect (word8 0wxdd) ins
           val (bytes, ins'') = S.inputN (ins', 4)
           val length = UintScannerInt.scan bytes handle Overflow => raise Size
         in
-          unpackArray u length ins''
+          (length, ins'')
         end
     in
-      fun unpackList u ins = (
-           unpackFixArray u
-        || unpackArray16 u
-        || unpackArray32 u
-      ) ins
-
-      fun unpackVector u ins =
-        let val (list, ins') = unpackList u ins in
-          (Vector.fromList list, ins')
+      fun unpackArrayFold u f init ins =
+        let
+          val (length, ins') = (scanFixArray || scanArray16 || scanArray32) ins
+          fun loop ins n acc =
+            if n = 0 then (acc, ins)
+            else
+              let val (value, ins') = u ins in
+                loop ins' (n - 1) (f (value, acc))
+              end
+        in
+          loop ins' length init
         end
-
-      fun unpackArray u ins =
-        let val (list, ins') = unpackList u ins in 
-          (Array.fromList list, ins')
-        end
+      fun unpackList u ins = (unpackArrayFold u (op::) [] >> rev) ins 
+      fun unpackVector u ins = (unpackList u >> Vector.fromList) ins
+      fun unpackArray u ins = (unpackList u >> Array.fromList) ins
     end
  
     fun unpackPair (u1, u2) ins =
