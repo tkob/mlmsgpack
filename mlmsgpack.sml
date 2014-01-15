@@ -274,6 +274,8 @@ functor MessagePack(structure S : sig
     val unpackTuple4 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker -> ('a * 'b * 'c * 'd) unpacker
     val unpackTuple5 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker * 'e unpacker -> ('a * 'b * 'c * 'd * 'e) unpacker
     val unpackTuple6 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker * 'e unpacker * 'f unpacker -> ('a * 'b * 'c * 'd * 'e * 'f) unpacker
+
+    val unpackMapFold : ('a unpacker * 'b unpacker)-> ('a * 'b * 'c -> 'c) -> 'c -> 'c unpacker
   
     val unpackUnit : unit unpacker
     val unpackBool : bool unpacker
@@ -530,8 +532,18 @@ end = struct
 
     fun doUnpack u ins = u ins
   
+    (* alternate *)
     infix 0 ||
     fun (u1 || u2) ins = u1 ins handle Unpack => u2 ins
+
+    (* concatenate *)
+    infix 5 --
+    fun (u1 -- u2) ins = 
+      let val (v1, ins1) = u1 ins
+          val (v2, ins2) = u2 ins1
+      in
+        ((v1, v2), ins2)
+      end
 
     (* transformation *)
     infix 3 >>
@@ -547,11 +559,12 @@ end = struct
 
     local
       fun isFixArray byte = Word8.andb (byte, word8 0wxf0) = word8 0wx90
-      fun lengthOfFixArray byte = Word8.toInt (Word8.andb (byte, word8 0wx0f))
+      fun isFixMap byte = Word8.andb (byte, word8 0wxf0) = word8 0wx80
+      fun lengthOfFix byte = Word8.toInt (Word8.andb (byte, word8 0wx0f))
       fun scanFixArray ins =
         case S.input1 ins of
           SOME (byte, ins')
-            => if isFixArray byte then (lengthOfFixArray byte, ins')
+            => if isFixArray byte then (lengthOfFix byte, ins')
                else raise Unpack
         | NONE => raise Unpack
       fun scanArray16 ins = 
@@ -570,10 +583,30 @@ end = struct
         in
           (length, ins'')
         end
-    in
-      fun unpackArrayFold u f init ins =
+      fun scanFixMap ins =
+        case S.input1 ins of
+          SOME (byte, ins')
+            => if isFixMap byte then (lengthOfFix byte, ins')
+               else raise Unpack
+        | NONE => raise Unpack
+      fun scanMap16 ins = 
         let
-          val (length, ins') = (scanFixArray || scanArray16 || scanArray32) ins
+          val ins' = expect (word8 0wxde) ins
+          val (bytes, ins'') = S.inputN (ins', 2)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          (length, ins'')
+        end
+      fun scanMap32 ins = 
+        let
+          val ins' = expect (word8 0wxdf) ins
+          val (bytes, ins'') = S.inputN (ins', 4)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          (length, ins'')
+        end
+      fun unpackFold length u f init ins =
+        let
           fun loop ins n acc =
             if n = 0 then (acc, ins)
             else
@@ -581,11 +614,26 @@ end = struct
                 loop ins' (n - 1) (f (value, acc))
               end
         in
-          loop ins' length init
+          loop ins length init
         end
+    in
+      fun unpackArrayFold u f init ins =
+        let
+          val (length, ins') = (scanFixArray || scanArray16 || scanArray32) ins
+        in
+          unpackFold length u f init ins'
+        end
+
       fun unpackList u ins = (unpackArrayFold u (op::) [] >> rev) ins 
       fun unpackVector u ins = (unpackList u >> Vector.fromList) ins
       fun unpackArray u ins = (unpackList u >> Array.fromList) ins
+
+      fun unpackMapFold (u1, u2) f init ins =
+        let
+          val (length, ins') = (scanFixMap || scanMap16 || scanMap32) ins
+        in
+          unpackFold length (u1 -- u2) (fn ((a, b), c) => f (a, b, c)) init ins'
+        end
     end
  
     fun unpackPair (u1, u2) ins =
