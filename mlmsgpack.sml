@@ -276,6 +276,7 @@ functor MessagePack(structure S : sig
     val unpackTuple6 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker * 'e unpacker * 'f unpacker -> ('a * 'b * 'c * 'd * 'e * 'f) unpacker
 
     val unpackMapFold : ('a unpacker * 'b unpacker)-> ('a * 'b * 'c -> 'c) -> 'c -> 'c unpacker
+    val unpackPairList : ('a unpacker * 'b unpacker)-> ('a * 'b) list unpacker
   
     val unpackUnit : unit unpacker
     val unpackBool : bool unpacker
@@ -634,6 +635,9 @@ end = struct
         in
           unpackFold length (u1 -- u2) (fn ((a, b), c) => f (a, b, c)) init ins'
         end
+
+      fun unpackPairList (u1, u2) ins =
+        unpackMapFold (u1, u2) (fn (k, v, l) => (k, v)::l) [] ins
     end
  
     fun unpackPair (u1, u2) ins =
