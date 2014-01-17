@@ -242,6 +242,7 @@ functor MessagePack(structure S : sig
     val packList   : 'a packer -> 'a list   packer
     val packVector : 'a packer -> 'a vector packer
     val packArray  : 'a packer -> 'a array  packer
+    val packArrayTabulate : 'a packer -> (int * (int -> 'a)) packer 
 
     val packPair   : 'a packer * 'b packer -> ('a * 'b) packer
     val packTuple3 : 'a packer * 'b packer * 'c packer -> ('a * 'b * 'c) packer
@@ -353,34 +354,45 @@ end = struct
       val fromWordToWord8 = Word8.fromLarge o Word.toLarge
       fun outputFixArray length outs =
         S.output1 (outs, fixArray length)
+      fun outputLength length outs =
+        if length < 0x10 then
+          (* FixArray *) 
+          outputFixArray length outs
+        else if length < 0x10000 then
+          (* array 16 *)
+          (S.output1 (outs, word8 0wxdc);
+          UintPrinterIntWord.print length 2 outs)
+        else if length div 0x10000 div 0x10000 = 0 then
+          (* array 32 *)
+          (S.output1 (outs, word8 0wxdd);
+          if Word.wordSize >= 32 then
+            UintPrinterIntWord.print length 4 outs
+          else if LargeWord.wordSize >= 32 then
+            UintPrinterIntLargeWord.print length 4 outs
+          else
+            UintPrinterInfInt.print length 4 outs)
+        else 
+          raise Size;
       fun packListLike length app p values outs =
         let
           val length = length values
         in
-          if length < 0x10 then
-            (* FixArray *) 
-            outputFixArray length outs
-          else if length < 0x10000 then
-            (* array 16 *)
-            (S.output1 (outs, word8 0wxdc);
-            UintPrinterIntWord.print length 2 outs)
-          else if length div 0x10000 div 0x10000 = 0 then
-            (* array 32 *)
-            (S.output1 (outs, word8 0wxdd);
-            if Word.wordSize >= 32 then
-              UintPrinterIntWord.print length 4 outs
-            else if LargeWord.wordSize >= 32 then
-              UintPrinterIntLargeWord.print length 4 outs
-            else
-              UintPrinterInfInt.print length 4 outs)
-          else 
-            raise Size;
+          outputLength length outs;
           app (fn value => p value outs) values
         end
     in
       fun packList   p values outs = packListLike List.length   List.app   p values outs
       fun packVector p values outs = packListLike Vector.length Vector.app p values outs
       fun packArray  p values outs = packListLike Array.length  Array.app  p values outs
+      fun packArrayTabulate p (n, f) outs =
+        let
+          fun loop i =
+            if i >= n then ()
+            else
+              p (f i) outs
+        in
+          loop 0
+        end
   
       fun packPair (p1, p2) (v1, v2) outs =
         (outputFixArray 2 outs;
