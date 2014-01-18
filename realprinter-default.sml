@@ -38,14 +38,14 @@ end = struct
       end
   in
     fun print real outs =
-      case Real.class real of
-        IEEEReal.NAN =>
-          S.output (outs, Byte.stringToBytes "\177\370\000\000\000\000\000\000")
-      | IEEEReal.INF => printInf real outs
-          if Real.signBit then
-            S.output (outs, Byte.stringToBytes "\177\370\000\000\000\000\000\000")
-          else
-            S.output (outs, Byte.stringToBytes "\377\360\000\000\000\000\000\000")
-      | _ => printNormal real outs
+      if Real.isNan real then
+        S.output (outs, Byte.stringToBytes "\127\248\000\000\000\000\000\000")
+      else if not (Real.isFinite real) then
+        if Real.signBit real then
+          S.output (outs, Byte.stringToBytes "\127\240\000\000\000\000\000\000")
+        else
+          S.output (outs, Byte.stringToBytes "\255\240\000\000\000\000\000\000")
+      else
+        printNormal real outs
   end
 end
