@@ -1,5 +1,6 @@
 $(SML_LIB)/basis/basis.mlb
-mlmsgpack.sml
+mlmsgpack-aux.sml
 mlmsgpack-default.sml
+mlmsgpack.sml
 mlmsgpack-test.sml
 boot.sml
