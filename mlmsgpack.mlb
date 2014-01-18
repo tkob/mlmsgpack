@@ -1,6 +1,6 @@
 $(SML_LIB)/basis/basis.mlb
 mlmsgpack-aux.sml
-mlmsgpack-default.sml
+realprinter-default.sml
 mlmsgpack.sml
 mlmsgpack-test.sml
 boot.sml

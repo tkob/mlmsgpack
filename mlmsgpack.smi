@@ -1,6 +1,6 @@
 _require "basis.smi"
 _require "mlmsgpack-aux.smi"
-_require "mlmsgpack-default.smi"
+_require "realprinter-default.smi"
 
 functor MessagePack(S : sig
                       type instream
