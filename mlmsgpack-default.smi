@@ -1,0 +1,9 @@
+_require "basis.smi"
+_require "mlmsgpack-aux.smi"
+
+functor RealPrinter(S : sig
+                      type outstream
+                      val output1 : outstream * Word8.word -> unit
+                    end) = struct
+  val print : real -> S.outstream -> unit
+end

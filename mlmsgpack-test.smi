@@ -1,0 +1,4 @@
+_require "basis.smi"
+_require "mlmsgpack.smi"
+
+val main : unit -> unit

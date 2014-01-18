@@ -1,4 +1,4 @@
-functor MessagePack(structure S : sig
+functor MessagePack(S : sig
                       type instream
                       type outstream
                       val input1 : instream -> (Word8.word * instream) option
@@ -61,46 +61,16 @@ functor MessagePack(structure S : sig
     val unpackOption : 'a unpacker -> 'a option unpacker
   end
 end = struct
-  structure UintScannerInt = UintScanner(Int)
-  structure UintScannerLargeInt = UintScanner(LargeInt)
-  structure IntScannerIntWord =
-    IntScanner(structure I = Int;
-               structure W = Word;
-               val toInt = W.toIntX)
-  structure IntScannerIntLargeWord =
-    IntScanner(structure I = Int;
-               structure W = LargeWord;
-               val toInt = W.toIntX)
-  structure IntScannerLargeIntWord =
-    IntScanner(structure I = LargeInt;
-               structure W = Word;
-               val toInt = W.toLargeIntX)
-  structure IntScannerLargeIntLargeWord =
-    IntScanner(structure I = LargeInt;
-               structure W = LargeWord;
-               val toInt = W.toLargeIntX)
 
-  structure UintPrinterIntWord =
-    UintPrinter(structure I = Int;
-                structure W = Word;
-                structure S = S)
-  structure UintPrinterIntLargeWord =
-    UintPrinter(structure I = Int;
-                structure W = LargeWord;
-                structure S = S)
-  structure UintPrinterInfInt =
-    UintPrinterInf(structure I = Int;
-                   structure S = S;
-                   val fromInt = Word8.fromInt)
+  structure UintPrinterIntWord = UintPrinterIntWord(S)
+  structure UintPrinterIntLargeWord = UintPrinterIntLargeWord(S)
+  structure UintPrinterInfInt = UintPrinterInfInt(S)
 
   structure IntPrinterIntWord = UintPrinterIntWord
   structure IntPrinterIntLargeWord = UintPrinterIntLargeWord
   structure IntPrinterInfInt = UintPrinterInfInt
 
-  structure BitScannerInt = BitScanner(structure I = Int; val toInt = Word8.toInt)
-  structure BitScannerLargeInt = BitScanner(structure I = LargeInt; val toInt = Word8.toLargeInt)
-
-  structure RealPrinter = RealPrinter(structure S = S)
+  structure RealPrinter = RealPrinter(S)
 
   structure IntMP = struct
     datatype int = Int of Int.int
@@ -661,4 +631,4 @@ end
 
 (* structure MessagePackBinIO = MessagePack(structure PR = PR; structure S = BinIO.StreamIO)
 structure MessagePackBinTextIO = MessagePack(structure PR = PR; structure S = BinTextIO) *)
-structure MessagePackIntListIO = MessagePack(structure S = IntListIO)
+structure MessagePackIntListIO = MessagePack(IntListIO)

@@ -224,3 +224,42 @@ end = struct
       scan src length 0 (I.fromInt 0)
     end
 end
+
+(* exported functor applications *)
+
+structure UintScannerInt = UintScanner(Int)
+structure UintScannerLargeInt = UintScanner(LargeInt)
+structure IntScannerIntWord =
+  IntScanner(structure I = Int;
+             structure W = Word;
+             val toInt = W.toIntX)
+structure IntScannerIntLargeWord =
+  IntScanner(structure I = Int;
+             structure W = LargeWord;
+             val toInt = W.toIntX)
+structure IntScannerLargeIntWord =
+  IntScanner(structure I = LargeInt;
+             structure W = Word;
+             val toInt = W.toLargeIntX)
+structure IntScannerLargeIntLargeWord =
+  IntScanner(structure I = LargeInt;
+             structure W = LargeWord;
+             val toInt = W.toLargeIntX)
+
+signature OS = sig
+  type outstream
+  val output1 : outstream * Word8.word -> unit
+end
+
+functor UintPrinterIntWord(S : OS) :> sig
+  val print : Int.int -> int -> S.outstream -> unit
+end = UintPrinter(structure I = Int; structure W = Word; structure S = S) 
+functor UintPrinterIntLargeWord(S : OS) :> sig
+  val print : Int.int -> int -> S.outstream -> unit
+end = UintPrinter(structure I = Int; structure W = LargeWord; structure S = S)
+functor UintPrinterInfInt(S : OS) :> sig
+  val print : Int.int -> int -> S.outstream -> unit
+end = UintPrinterInf(structure I = Int; structure S = S; val fromInt = Word8.fromInt)
+
+structure BitScannerInt = BitScanner(structure I = Int; val toInt = Word8.toInt)
+structure BitScannerLargeInt = BitScanner(structure I = LargeInt; val toInt = Word8.toLargeInt)
