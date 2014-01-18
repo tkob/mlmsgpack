@@ -1,0 +1,11 @@
+Library
+  functor MessagePack
+
+  structure IntListIO
+  structure MessagePackIntListIO
+is
+  mlmsgpack-aux.sml
+  realprinter-default.sml
+  mlmsgpack.sml
+  
+  $/basis.cm

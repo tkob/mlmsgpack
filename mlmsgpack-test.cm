@@ -1,0 +1,10 @@
+Library
+  structure PackTest
+  structure UnpackTest
+  funsig main
+is
+
+mlmsgpack.cm
+mlmsgpack-test.sml
+
+$/basis.cm
