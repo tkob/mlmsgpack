@@ -2,10 +2,12 @@ functor RealPrinter(S : sig
                       type outstream
                       val output1 : outstream * Word8.word -> unit
                     end) :> sig
+  val bytesPerElem : int
   (* print int n outs *)
   val print : real -> S.outstream -> unit
 end = struct
   structure UintPrinterIntWord = UintPrinterIntWord(S)
+  val bytesPerElem = 8
   fun print real outs =
     let
       val {man = significand, exp = exponent} = Real.toManExp real

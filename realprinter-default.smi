@@ -5,5 +5,6 @@ functor RealPrinter(S : sig
                       type outstream
                       val output1 : outstream * Word8.word -> unit
                     end) = struct
+  val bytesPerElem : int
   val print : real -> S.outstream -> unit
 end

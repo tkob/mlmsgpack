@@ -227,7 +227,12 @@ end = struct
     end
 
     fun packReal real outs =
-      (S.output1 (outs, word8 0wxcb);
+      (if RealPrinter.bytesPerElem = 8 then
+        S.output1 (outs, word8 0wxcb)
+      else if RealPrinter.bytesPerElem = 4 then
+        S.output1 (outs, word8 0wxca)
+      else
+        raise Pack;
       RealPrinter.print real outs)
 
     fun packBytes bytes outs =
