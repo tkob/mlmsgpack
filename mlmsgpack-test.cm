@@ -1,7 +1,6 @@
 Library
   structure PackTest
   structure UnpackTest
-  funsig main
 is
 
 mlmsgpack.cm
