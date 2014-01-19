@@ -206,3 +206,5 @@ fun main () =
     UnpackTest.doIt ();
     println "\ndone."
   end
+
+val _ = main ()
