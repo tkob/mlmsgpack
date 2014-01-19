@@ -41,6 +41,14 @@ Then, use .sml files in the following order.
 - realprinter-fail.sml
 - mlmsgpack.sml
 
+#### HaMLet
+
+From the interactive shell, use .sml files in the following order.
+
+- mlmsgpack-aux.sml
+- realprinter-fail.sml
+- mlmsgpack.sml
+
 #### Alice ML
 
 From the interactive shell, use .sml files in the following order.
@@ -49,7 +57,7 @@ From the interactive shell, use .sml files in the following order.
 - realprinter-fail.sml
 - mlmsgpack.sml
 
-#### SML#
+#### SMLSharp
 
 .smi files are provided. Require mlmsgpack.smi from your .smi file.
 
@@ -66,12 +74,17 @@ Packing real values produces imprecise results in some situations.
 
 Packing real values is not supported, since some components of the SML Basis Library are not provided.
 
+#### HaMLet
+
+Packing real values is not supported, since some components of the SML Basis Library are not provided.
+Some functions are very slow, although they works properly. (We tested HaMLet compiled with MLton.)
+
 #### Alice ML
 
 Packing real values is not supported, since some components of the SML Basis Library are not provided.
 Also, some unit tests fail.
 
-#### SML#
+#### SMLSharp
 
 Several functions do not work properly because of bugs of SML#.
 
