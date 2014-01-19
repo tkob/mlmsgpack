@@ -91,7 +91,7 @@ Several functions do not work properly because of bugs of SML#.
 Status
 ------
 
-Not complete.
+Not complete. Bin and ext are not supported yet. Float support is in beta stage.
 
 See Also
 --------
