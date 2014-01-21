@@ -37,6 +37,8 @@ structure Test = struct
     Real.negInf,
     0.0 / 0.0,
     ~0.0 / 0.0,
+    PackRealBig.fromBytes (Word8Vector.fromList [0wx00, 0wx0F, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF]),
+    PackRealBig.fromBytes (Word8Vector.fromList [0wx80, 0wx0F, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF]),
     0.0,
     ~0.0
   ]
