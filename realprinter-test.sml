@@ -1,3 +1,8 @@
+(*
+  This test suite compares results of RealPrinter and that of PackRealBig.
+  This file depends on MLton.
+ *)
+
 structure Test = struct
   structure RealPrinterIntListIO = RealPrinter(IntListIO)
 
@@ -43,19 +48,22 @@ structure Test = struct
     ~0.0
   ]
 
-  open MLton.Random
-  val _ = case useed () of
-            NONE => ()
-          | SOME s => srand s
-
-  fun randomReal () =
-    let 
-      val word8 = Word8.fromLarge o Word.toLarge
-      fun randomByte _ = word8 (rand ())
-      val randomBytes = Word8Array.vector (Word8Array.tabulate (8, randomByte))
-    in
-      PackRealBig.fromBytes randomBytes
-    end
+  local 
+    open MLton.Random
+  in
+    val _ = case useed () of
+              NONE => ()
+            | SOME s => srand s
+  
+    fun randomReal () =
+      let 
+        val word8 = Word8.fromLarge o Word.toLarge
+        fun randomByte _ = word8 (rand ())
+        val randomBytes = Word8Array.vector (Word8Array.tabulate (8, randomByte))
+      in
+        PackRealBig.fromBytes randomBytes
+      end
+  end
 
   fun doIt () =
     let
