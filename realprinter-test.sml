@@ -43,12 +43,30 @@ structure Test = struct
     ~0.0
   ]
 
-  fun doIt () =
-    let fun run value =
-      if test value then print "." else print "F"
-      handle _ => print "E"
+  open MLton.Random
+  val _ = case useed () of
+            NONE => ()
+          | SOME s => srand s
+
+  fun randomReal () =
+    let 
+      val word8 = Word8.fromLarge o Word.toLarge
+      fun randomByte _ = word8 (rand ())
+      val randomBytes = Word8Array.vector (Word8Array.tabulate (8, randomByte))
     in
-      List.app run tests
+      PackRealBig.fromBytes randomBytes
+    end
+
+  fun doIt () =
+    let
+      fun run value =
+        if test value then print "." else print "F" handle _ => print "E"
+      fun randomTest n =
+        if n = 0 then ()
+        else (run (randomReal ()); randomTest (n - 1))
+    in
+      List.app run tests;
+      randomTest 100
     end
 end
 

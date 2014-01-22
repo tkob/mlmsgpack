@@ -1,4 +1,5 @@
 $(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/basis/mlton.mlb 
 mlmsgpack-aux.sml
 realprinter-default.sml
 mlmsgpack.sml
