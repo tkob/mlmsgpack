@@ -13,99 +13,109 @@ structure PackTest = struct
     | SOME p => p < n
 
   val tests = [
-    fn () => doPack packInt 0 = [0],
-    fn () => doPack packInt 127 = [127] (* max positive fixnum *),
-    fn () => doPack packInt 128 = [0xcc, 128],
-    fn () => doPack packInt 0xff = [0xcc, 255] (* max uint 8 *),
+    ("1", fn () => doPack packInt 0 = [0]),
+    ("2", fn () => doPack packInt 127 = [127] (* max positive fixnum *)),
+    ("3", fn () => doPack packInt 128 = [0xcc, 128]),
+    ("4", fn () => doPack packInt 0xff = [0xcc, 255] (* max uint 8 *)),
 
-    fn () => doPack packInt 0x100 = [0xcd, 0x01, 0x00],
-    fn () => doPack packInt 0xffff = [0xcd, 0xff, 0xff] (* max uint 16 *),
+    ("5", fn () => doPack packInt 0x100 = [0xcd, 0x01, 0x00]),
+    ("6", fn () => doPack packInt 0xffff = [0xcd, 0xff, 0xff] (* max uint 16 *)),
 
-    fn () => doPack packInt 0x10000 = [0xce, 0x00, 0x01, 0x00, 0x00],
-    fn () => doPack packInt 0x3fffffff = [0xce, 0x3f, 0xff, 0xff, 0xff] (* max int 31 *),
-    fn () => Int.precision <? 32 orelse doPack packInt (0x7fff * 0x10000 + 0xffff) = [0xce, 0x7f, 0xff, 0xff, 0xff] (* max int 32 *),
-    fn () => Int.precision <? 33 orelse doPack packInt (0xffff * 0x10000 + 0xffff) = [0xce, 0xff, 0xff, 0xff, 0xff] (* max uint 32 *),
+    ("7", fn () => doPack packInt 0x10000 = [0xce, 0x00, 0x01, 0x00, 0x00]),
+    ("8", fn () => doPack packInt 0x3fffffff = [0xce, 0x3f, 0xff, 0xff, 0xff] (* max int 31 *)),
+    ("9", fn () => Int.precision <? 32 orelse doPack packInt (0x7fff * 0x10000 + 0xffff) = [0xce, 0x7f, 0xff, 0xff, 0xff] (* max int 32 *)),
+    ("10", fn () => Int.precision <? 33 orelse doPack packInt (0xffff * 0x10000 + 0xffff) = [0xce, 0xff, 0xff, 0xff, 0xff] (* max uint 32 *)),
 
-    fn () => Int.precision <? 34 orelse doPack packInt (0xffff * 0x10000 + 0xffff + 1) = [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00],
-    fn () => Int.precision <? 63 orelse doPack packInt (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 63 *),
-    fn () => Int.precision <? 64 orelse doPack packInt (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 64 *),
-    fn () => Int.precision <? 65 orelse doPack packInt (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max uint 64 *),
+    ("11", fn () => Int.precision <? 34 orelse doPack packInt (0xffff * 0x10000 + 0xffff + 1) = [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]),
+    ("12", fn () => Int.precision <? 63 orelse doPack packInt (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 63 *)),
+    ("13", fn () => Int.precision <? 64 orelse doPack packInt (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max int 64 *)),
+    ("14", fn () => Int.precision <? 65 orelse doPack packInt (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) = [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] (* max uint 64 *)),
 
-    fn () => doPack packInt ~1 = [0xff],
-    fn () => doPack packInt ~32 = [0xe0] (* min negative fixnum *),
+    ("15", fn () => doPack packInt ~1 = [0xff]),
+    ("16", fn () => doPack packInt ~32 = [0xe0] (* min negative fixnum *)),
 
-    fn () => doPack packInt ~33 = [0xd0, 0xdf],
-    fn () => doPack packInt ~128 = [0xd0, 0x80] (* min int 8 *),
+    ("17", fn () => doPack packInt ~33 = [0xd0, 0xdf]),
+    ("18", fn () => doPack packInt ~128 = [0xd0, 0x80] (* min int 8 *)),
 
-    fn () => doPack packInt ~129 = [0xd1, 0xff, 0x7f],
-    fn () => doPack packInt ~32768 = [0xd1, 0x80, 0x00] (* min int 16 *),
+    ("19", fn () => doPack packInt ~129 = [0xd1, 0xff, 0x7f]),
+    ("20", fn () => doPack packInt ~32768 = [0xd1, 0x80, 0x00] (* min int 16 *)),
 
-    fn () => doPack packInt ~32769 = [0xd2, 0xff, 0xff, 0x7f, 0xff],
-    fn () => doPack packInt ~1073741824 = [0xd2, 0xc0, 0x00, 0x00, 0x00] (* min int 31 *),
-    fn () => Int.precision <? 32 orelse doPack packInt (~0x8000 * 0x10000) (* ~2147483648 *) = [0xd2, 0x80, 0x00, 0x00, 0x00] (* min int 32 *),
+    ("21", fn () => doPack packInt ~32769 = [0xd2, 0xff, 0xff, 0x7f, 0xff]),
+    ("22", fn () => doPack packInt ~1073741824 = [0xd2, 0xc0, 0x00, 0x00, 0x00] (* min int 31 *)),
+    ("23", fn () => Int.precision <? 32 orelse doPack packInt (~0x8000 * 0x10000) (* ~2147483648 *) = [0xd2, 0x80, 0x00, 0x00, 0x00] (* min int 32 *)),
 
-    fn () => Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff],
-    fn () => Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *),
+    ("24", fn () => Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 - 1) (* ~2147483649 *) = [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff]),
+    ("25", fn () => Int.precision <? 64 orelse doPack packInt (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) = [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] (* min int 64 *)),
 
 
-    fn () => doPack packReal 0.0 = [0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal ~0.0 = [0xcb, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal (0.0 / 0.0) = [0xcb, 0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal (~0.0 / 0.0) = [0xcb, 0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal Real.posInf = [0xcb, 0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal Real.negInf = [0xcb, 0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal Math.pi = [0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18],
-    fn () => doPack packReal (Math.pi * ~1.0) = [0xcb, 0xc0, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18],
-    fn () => doPack packReal Real.maxFinite = [0xcb, 0x7f, 0xef, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
-    fn () => doPack packReal (Real.maxFinite * ~1.0) = [0xcb, 0xff, 0xef, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
-    fn () => doPack packReal Real.minPos = [0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
-    fn () => doPack packReal (Real.minPos * ~1.0) = [0xcb, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
-    fn () => doPack packReal Real.minNormalPos = [0xcb, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-    fn () => doPack packReal (Real.minNormalPos * ~1.0) = [0xcb, 0x80, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+    ("26", fn () => doPack packReal 0.0 = [0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("27", fn () => doPack packReal ~0.0 = [0xcb, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("28", fn () => doPack packReal (0.0 / 0.0) = [0xcb, 0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("29", fn () => doPack packReal (~0.0 / 0.0) = [0xcb, 0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("30", fn () => doPack packReal Real.posInf = [0xcb, 0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("31", fn () => doPack packReal Real.negInf = [0xcb, 0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("32", fn () => doPack packReal Math.pi = [0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18]),
+    ("33", fn () => doPack packReal (Math.pi * ~1.0) = [0xcb, 0xc0, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18]),
+    ("34", fn () => doPack packReal Real.maxFinite = [0xcb, 0x7f, 0xef, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+    ("35", fn () => doPack packReal (Real.maxFinite * ~1.0) = [0xcb, 0xff, 0xef, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+    ("36", fn () => doPack packReal Real.minPos = [0xcb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]),
+    ("37", fn () => doPack packReal (Real.minPos * ~1.0) = [0xcb, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]),
+    ("38", fn () => doPack packReal Real.minNormalPos = [0xcb, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    ("39", fn () => doPack packReal (Real.minNormalPos * ~1.0) = [0xcb, 0x80, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
 (*
     fun () => doPack packReal (PackRealBig.fromBytes (Word8Vector.fromList [0wx00, 0wx0F, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF]));
     fun () => doPack packReal (PackRealBig.fromBytes (Word8Vector.fromList [0wx80, 0wx0F, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF, 0wxFF]));
 *)
 
-    fn () => doPack packUnit () = [0xc0],
-    fn () => doPack packBool false = [0xc2],
-    fn () => doPack packBool true = [0xc3],
+    ("40", fn () => doPack packUnit () = [0xc0]),
+    ("41", fn () => doPack packBool false = [0xc2]),
+    ("42", fn () => doPack packBool true = [0xc3]),
 
-    fn () => doPack (packPair (packInt, packInt)) (1, 2) = [0x92, 1, 2],
-    fn () => doPack (packPair (packInt, packInt)) (1, 128) = [0x92, 1, 0xcc, 128],
-    fn () => doPack (packPair (packInt, packBool)) (128, true) = [0x92, 0xcc, 128, 0xc3],
-    fn () => doPack (packPair (packInt, packPair (packInt, packInt))) (1, (2, 3)) = [0x92, 1, 0x92, 2, 3],
-    fn () => doPack (packTuple3 (packInt, packInt, packInt)) (1, 2, 3) = [0x93, 1, 2, 3],
-    fn () => doPack (packTuple4 (packInt, packInt, packInt, packInt)) (1, 2, 3, 4) = [0x94, 1, 2, 3, 4],
-    fn () => doPack (packTuple5 (packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5) = [0x95, 1, 2, 3, 4, 5],
-    fn () => doPack (packTuple6 (packInt, packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5, 6) = [0x96, 1, 2, 3, 4, 5, 6],
+    ("43", fn () => doPack (packPair (packInt, packInt)) (1, 2) = [0x92, 1, 2]),
+    ("44", fn () => doPack (packPair (packInt, packInt)) (1, 128) = [0x92, 1, 0xcc, 128]),
+    ("45", fn () => doPack (packPair (packInt, packBool)) (128, true) = [0x92, 0xcc, 128, 0xc3]),
+    ("46", fn () => doPack (packPair (packInt, packPair (packInt, packInt))) (1, (2, 3)) = [0x92, 1, 0x92, 2, 3]),
+    ("47", fn () => doPack (packTuple3 (packInt, packInt, packInt)) (1, 2, 3) = [0x93, 1, 2, 3]),
+    ("48", fn () => doPack (packTuple4 (packInt, packInt, packInt, packInt)) (1, 2, 3, 4) = [0x94, 1, 2, 3, 4]),
+    ("49", fn () => doPack (packTuple5 (packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5) = [0x95, 1, 2, 3, 4, 5]),
+    ("50", fn () => doPack (packTuple6 (packInt, packInt, packInt, packInt, packInt, packInt)) (1, 2, 3, 4, 5, 6) = [0x96, 1, 2, 3, 4, 5, 6]),
 
-    fn () => doPack (packList packInt) [] = [0x90],
-    fn () => doPack (packList packInt) [0] = [0x91, 0],
-    fn () => doPack (packList packInt) (List.tabulate (15, fn n => n))  = 0x9f::List.tabulate (15, fn n => n),
-    fn () => doPack (packList packInt) (List.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1),
-    fn () => doPack (packList packInt) (List.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1),
+    ("51", fn () => doPack (packList packInt) [] = [0x90]),
+    ("52", fn () => doPack (packList packInt) [0] = [0x91, 0]),
+    ("53", fn () => doPack (packList packInt) (List.tabulate (15, fn n => n))  = 0x9f::List.tabulate (15, fn n => n)),
+    ("54", fn () => doPack (packList packInt) (List.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)),
+    ("55", fn () => doPack (packList packInt) (List.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)),
 
-    fn () => doPack (packVector packInt) (Vector.tabulate (0, fn n => n)) = [0x90],
-    fn () => doPack (packVector packInt) (Vector.tabulate (1, fn n => n)) =  [0x91, 0],
-    fn () => doPack (packVector packInt) (Vector.tabulate (15, fn n => n)) = 0x9f::List.tabulate (15, fn n => n),
-    fn () => doPack (packVector packInt) (Vector.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1),
-    fn () => doPack (packVector packInt) (Vector.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1),
+    ("56", fn () => doPack (packVector packInt) (Vector.tabulate (0, fn n => n)) = [0x90]),
+    ("57", fn () => doPack (packVector packInt) (Vector.tabulate (1, fn n => n)) =  [0x91, 0]),
+    ("58", fn () => doPack (packVector packInt) (Vector.tabulate (15, fn n => n)) = 0x9f::List.tabulate (15, fn n => n)),
+    ("59", fn () => doPack (packVector packInt) (Vector.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)),
+    ("60", fn () => doPack (packVector packInt) (Vector.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)),
 
-    fn () => doPack (packArray packInt) (Array.tabulate (0, fn n => n)) = [0x90],
-    fn () => doPack (packArray packInt) (Array.tabulate (1, fn n => n)) =  [0x91, 0],
-    fn () => doPack (packArray packInt) (Array.tabulate (15, fn n => n)) = 0x9f::List.tabulate (15, fn n => n),
-    fn () => doPack (packArray packInt) (Array.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1),
-    fn () => doPack (packArray packInt) (Array.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1),
+    ("61", fn () => doPack (packArray packInt) (Array.tabulate (0, fn n => n)) = [0x90]),
+    ("62", fn () => doPack (packArray packInt) (Array.tabulate (1, fn n => n)) =  [0x91, 0]),
+    ("63", fn () => doPack (packArray packInt) (Array.tabulate (15, fn n => n)) = 0x9f::List.tabulate (15, fn n => n)),
+    ("64", fn () => doPack (packArray packInt) (Array.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)),
+    ("65", fn () => doPack (packArray packInt) (Array.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)),
 
-    fn () => true]
+    ("_", fn () => true)]
+
+  datatype fail = Fail of string | Error of string * exn
 
   fun doIt () =
-    let fun run test =
-      if test () then print "." else print "F"
-      handle _ => print "E"
+    let
+      fun printResult r = case r of
+        Fail label => print (label ^ " failed.\n")
+      | Error (label, exn) => print (label ^ " failed: " ^ exnMessage exn ^ "\n")
+      fun run tests failed =
+        case tests of
+          [] => (print "\n"; List.app (fn r => printResult r) (rev failed))
+        | (label, test):: tests =>
+          (if test () then (print "."; run tests failed)
+          else (print "F"; run tests (Fail label::failed)))
+          handle exn => (print "E"; run tests (Error (label, exn)::failed))
     in
-      List.app run tests
+      run tests []
     end
 end
 
