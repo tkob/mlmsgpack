@@ -134,68 +134,68 @@ structure UnpackTest = struct
     | SOME p => p < n
 
   val tests = [
-    fn () => doUnpack unpackInt [0] = 0,
-    fn () => doUnpack unpackInt [127] = 127(* max positive fixnum *),
-    fn () => doUnpack unpackInt [0xcc, 128] = 128,
-    fn () => doUnpack unpackInt [0xcc, 255] = 0xff (* max uint 8 *),
+    ("1", fn () => doUnpack unpackInt [0] = 0),
+    ("2", fn () => doUnpack unpackInt [127] = 127(* max positive fixnum *)),
+    ("3", fn () => doUnpack unpackInt [0xcc, 128] = 128),
+    ("4", fn () => doUnpack unpackInt [0xcc, 255] = 0xff (* max uint 8 *)),
 
-    fn () => doUnpack unpackInt [0xcd, 0x01, 0x00] = 0x100 ,
-    fn () => doUnpack unpackInt [0xcd, 0xff, 0xff] = 0xffff (* max uint 16 *),
+    ("5", fn () => doUnpack unpackInt [0xcd, 0x01, 0x00] = 0x100 ),
+    ("6", fn () => doUnpack unpackInt [0xcd, 0xff, 0xff] = 0xffff (* max uint 16 *)),
 
-    fn () => doUnpack unpackInt [0xce, 0x00, 0x01, 0x00, 0x00] = 0x10000 ,
-    fn () => doUnpack unpackInt [0xce, 0x3f, 0xff, 0xff, 0xff] = 0x3fffffff (* max int 31 *),
-    fn () => Int.precision <? 32 orelse doUnpack unpackInt [0xce, 0x7f, 0xff, 0xff, 0xff] = (0x7fff * 0x10000 + 0xffff) (* max int 32 *),
-    fn () => Int.precision <? 33 orelse doUnpack unpackInt [0xce, 0xff, 0xff, 0xff, 0xff] = (0xffff * 0x10000 + 0xffff) (* max uint 32 *),
+    ("7", fn () => doUnpack unpackInt [0xce, 0x00, 0x01, 0x00, 0x00] = 0x10000 ),
+    ("8", fn () => doUnpack unpackInt [0xce, 0x3f, 0xff, 0xff, 0xff] = 0x3fffffff (* max int 31 *)),
+    ("9", fn () => Int.precision <? 32 orelse doUnpack unpackInt [0xce, 0x7f, 0xff, 0xff, 0xff] = (0x7fff * 0x10000 + 0xffff) (* max int 32 *)),
+    ("10", fn () => Int.precision <? 33 orelse doUnpack unpackInt [0xce, 0xff, 0xff, 0xff, 0xff] = (0xffff * 0x10000 + 0xffff) (* max uint 32 *)),
 
-    fn () => Int.precision <? 34 orelse doUnpack unpackInt [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00] = (0xffff * 0x10000 + 0xffff + 1),
-    fn () => Int.precision <? 63 orelse doUnpack unpackInt [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max int 63 *),
-    fn () => Int.precision <? 64 orelse doUnpack unpackInt [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max int 64 *),
-    fn () => Int.precision <? 65 orelse doUnpack unpackInt [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max uint 64 *),
+    ("11", fn () => Int.precision <? 34 orelse doUnpack unpackInt [0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00] = (0xffff * 0x10000 + 0xffff + 1)),
+    ("12", fn () => Int.precision <? 63 orelse doUnpack unpackInt [0xcf, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0x3fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max int 63 *)),
+    ("13", fn () => Int.precision <? 64 orelse doUnpack unpackInt [0xcf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0x7fff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max int 64 *)),
+    ("14", fn () => Int.precision <? 65 orelse doUnpack unpackInt [0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff] = (((0xffff * 0x10000 + 0xffff) * 0x10000 + 0xffff) * 0x10000 + 0xffff) (* max uint 64 *)),
 
-    fn () => doUnpack unpackInt [0xff] = ~1 ,
-    fn () => doUnpack unpackInt [0xe0] = ~32 (* min negative fixnum *),
-    fn () => doUnpack unpackInt [0xd0, 0xdf] = ~33 ,
-    fn () => doUnpack unpackInt [0xd0, 0x80] = ~128 (* min int 8 *),
+    ("15", fn () => doUnpack unpackInt [0xff] = ~1 ),
+    ("16", fn () => doUnpack unpackInt [0xe0] = ~32 (* min negative fixnum *)),
+    ("17", fn () => doUnpack unpackInt [0xd0, 0xdf] = ~33 ),
+    ("18", fn () => doUnpack unpackInt [0xd0, 0x80] = ~128 (* min int 8 *)),
 
-    fn () => doUnpack unpackInt [0xd1, 0xff, 0x7f] = ~129 ,
-    fn () => doUnpack unpackInt [0xd1, 0x80, 0x00] = ~32768 (* min int 16 *),
+    ("19", fn () => doUnpack unpackInt [0xd1, 0xff, 0x7f] = ~129 ),
+    ("20", fn () => doUnpack unpackInt [0xd1, 0x80, 0x00] = ~32768 (* min int 16 *)),
 
-    fn () => doUnpack unpackInt [0xd2, 0xff, 0xff, 0x7f, 0xff] = ~32769,
-    fn () => doUnpack unpackInt [0xd2, 0xc0, 0x00, 0x00, 0x00] = ~1073741824 (* min int 31 *),
-    fn () => Int.precision <? 32 orelse doUnpack unpackInt [0xd2, 0x80, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000) (* ~2147483648 *) (* min int 32 *),
+    ("21", fn () => doUnpack unpackInt [0xd2, 0xff, 0xff, 0x7f, 0xff] = ~32769),
+    ("22", fn () => doUnpack unpackInt [0xd2, 0xc0, 0x00, 0x00, 0x00] = ~1073741824 (* min int 31 *)),
+    ("23", fn () => Int.precision <? 32 orelse doUnpack unpackInt [0xd2, 0x80, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000) (* ~2147483648 *) (* min int 32 *)),
 
-    fn () => Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff] = (~0x8000 * 0x10000 - 1) (* ~2147483649 *) ,
-    fn () => Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) (* min int 64 *),
+    ("24", fn () => Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff] = (~0x8000 * 0x10000 - 1) (* ~2147483649 *) ),
+    ("25", fn () => Int.precision <? 64 orelse doUnpack unpackInt [0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] = (~0x8000 * 0x10000 * 0x10000 * 0x10000) (* ~9223372036854775808 *) (* min int 64 *)),
 
-    fn () => Real.toString (doUnpack unpackReal [0xca, 0xc2, 0xed, 0x40, 0x00]) = "~118.625",
-    fn () => Real.toString (doUnpack unpackReal [0xcb, 0xc0, 0x5d, 0xa8, 0x00, 0x00, 0x00, 0x00, 0x00]) = "~118.625",
-    fn () => Real.toString (doUnpack unpackReal [0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea]) = "3.14159265359",
-    fn () => Real.toString (doUnpack unpackReal [0xcb, 0x40, 0x05, 0xbf, 0x0a, 0x8b, 0x14, 0x5f, 0xcf]) = "2.71828182846",
+    ("26", fn () => Real.toString (doUnpack unpackReal [0xca, 0xc2, 0xed, 0x40, 0x00]) = "~118.625"),
+    ("27", fn () => Real.toString (doUnpack unpackReal [0xcb, 0xc0, 0x5d, 0xa8, 0x00, 0x00, 0x00, 0x00, 0x00]) = "~118.625"),
+    ("28", fn () => Real.toString (doUnpack unpackReal [0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea]) = "3.14159265359"),
+    ("29", fn () => Real.toString (doUnpack unpackReal [0xcb, 0x40, 0x05, 0xbf, 0x0a, 0x8b, 0x14, 0x5f, 0xcf]) = "2.71828182846"),
 
-    fn () => doUnpack unpackUnit [0xc0] = () ,
-    fn () => doUnpack unpackBool [0xc2] = false ,
-    fn () => doUnpack unpackBool [0xc3] = true ,
+    ("30", fn () => doUnpack unpackUnit [0xc0] = () ),
+    ("31", fn () => doUnpack unpackBool [0xc2] = false ),
+    ("32", fn () => doUnpack unpackBool [0xc3] = true ),
 
-    fn () => doUnpack (unpackPair (unpackInt, unpackInt)) [0x92, 1, 2] = (1, 2) ,
-    fn () => doUnpack (unpackPair (unpackInt, unpackInt)) [0x92, 1, 0xcc, 128] = (1, 128) ,
-    fn () => doUnpack (unpackPair (unpackInt, unpackBool)) [0x92, 0xcc, 128, 0xc3] = (128, true) ,
-    fn () => doUnpack (unpackPair (unpackInt, unpackPair (unpackInt, unpackInt))) [0x92, 1, 0x92, 2, 3] = (1, (2, 3)) ,
-    fn () => doUnpack (unpackTuple3 (unpackInt, unpackInt, unpackInt)) [0x93, 1, 2, 3] = (1, 2, 3) ,
-    fn () => doUnpack (unpackTuple4 (unpackInt, unpackInt, unpackInt, unpackInt)) [0x94, 1, 2, 3, 4] = (1, 2, 3, 4) ,
-    fn () => doUnpack (unpackTuple5 (unpackInt, unpackInt, unpackInt, unpackInt, unpackInt)) [0x95, 1, 2, 3, 4, 5] = (1, 2, 3, 4, 5) ,
-    fn () => doUnpack (unpackTuple6 (unpackInt, unpackInt, unpackInt, unpackInt, unpackInt, unpackInt)) [0x96, 1, 2, 3, 4, 5, 6] = (1, 2, 3, 4, 5, 6) ,
+    ("33", fn () => doUnpack (unpackPair (unpackInt, unpackInt)) [0x92, 1, 2] = (1, 2) ),
+    ("34", fn () => doUnpack (unpackPair (unpackInt, unpackInt)) [0x92, 1, 0xcc, 128] = (1, 128) ),
+    ("35", fn () => doUnpack (unpackPair (unpackInt, unpackBool)) [0x92, 0xcc, 128, 0xc3] = (128, true) ),
+    ("36", fn () => doUnpack (unpackPair (unpackInt, unpackPair (unpackInt, unpackInt))) [0x92, 1, 0x92, 2, 3] = (1, (2, 3)) ),
+    ("37", fn () => doUnpack (unpackTuple3 (unpackInt, unpackInt, unpackInt)) [0x93, 1, 2, 3] = (1, 2, 3) ),
+    ("38", fn () => doUnpack (unpackTuple4 (unpackInt, unpackInt, unpackInt, unpackInt)) [0x94, 1, 2, 3, 4] = (1, 2, 3, 4) ),
+    ("39", fn () => doUnpack (unpackTuple5 (unpackInt, unpackInt, unpackInt, unpackInt, unpackInt)) [0x95, 1, 2, 3, 4, 5] = (1, 2, 3, 4, 5) ),
+    ("40", fn () => doUnpack (unpackTuple6 (unpackInt, unpackInt, unpackInt, unpackInt, unpackInt, unpackInt)) [0x96, 1, 2, 3, 4, 5, 6] = (1, 2, 3, 4, 5, 6) ),
 
-    fn () => doUnpack (unpackList unpackInt) [0x90] = [],
-    fn () => doUnpack (unpackList unpackInt) [0x91, 0] = [0],
-    fn () => doUnpack (unpackList unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (List.tabulate (15, fn n => n)) ,
-    fn () => doUnpack (unpackList unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (List.tabulate (65535, fn _ => 1)) ,
-    fn () => doUnpack (unpackList unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (List.tabulate (65536, fn _ => 1)) ,
+    ("41", fn () => doUnpack (unpackList unpackInt) [0x90] = []),
+    ("42", fn () => doUnpack (unpackList unpackInt) [0x91, 0] = [0]),
+    ("43", fn () => doUnpack (unpackList unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (List.tabulate (15, fn n => n)) ),
+    ("44", fn () => doUnpack (unpackList unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (List.tabulate (65535, fn _ => 1)) ),
+    ("45", fn () => doUnpack (unpackList unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (List.tabulate (65536, fn _ => 1)) ),
 
-    fn () => doUnpack (unpackVector unpackInt) [0x90] = (Vector.tabulate (0, fn n => n)) ,
-    fn () => doUnpack (unpackVector unpackInt) [0x91, 0] = (Vector.tabulate (1, fn n => n)) ,
-    fn () => doUnpack (unpackVector unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (Vector.tabulate (15, fn n => n)) ,
-    fn () => doUnpack (unpackVector unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Vector.tabulate (65535, fn _ => 1)) ,
-    fn () => doUnpack (unpackVector unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Vector.tabulate (65536, fn _ => 1)) ,
+    ("46", fn () => doUnpack (unpackVector unpackInt) [0x90] = (Vector.tabulate (0, fn n => n)) ),
+    ("47", fn () => doUnpack (unpackVector unpackInt) [0x91, 0] = (Vector.tabulate (1, fn n => n)) ),
+    ("48", fn () => doUnpack (unpackVector unpackInt) (0x9f::List.tabulate (15, fn n => n)) = (Vector.tabulate (15, fn n => n)) ),
+    ("49", fn () => doUnpack (unpackVector unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Vector.tabulate (65535, fn _ => 1)) ),
+    ("50", fn () => doUnpack (unpackVector unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Vector.tabulate (65536, fn _ => 1)) ),
 
 (*
     fn () => doUnpack (unpackArray unpackInt) [0x90] = (Array.tabulate (0, fn n => n)) ,
@@ -204,13 +204,24 @@ structure UnpackTest = struct
     fn () => doUnpack (unpackArray unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Array.tabulate (65535, fn _ => 1)) ,
     fn () => doUnpack (unpackArray unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Array.tabulate (65536, fn _ => 1)) ,
 *)
-    fn () => true]
+    ("_", fn () => true)]
+
+  datatype fail = Fail of string | Error of string * exn
 
   fun doIt () =
-    let fun run test =
-      if test () then print "." else print "F"
+    let
+      fun printResult r = case r of
+        Fail label => print (label ^ " failed.\n")
+      | Error (label, exn) => print (label ^ " failed: " ^ exnMessage exn ^ "\n")
+      fun run tests failed =
+        case tests of
+          [] => (print "\n"; List.app (fn r => printResult r) (rev failed))
+        | (label, test):: tests =>
+          (if test () then (print "."; run tests failed)
+          else (print "F"; run tests (Fail label::failed)))
+          handle exn => (print "E"; run tests (Error (label, exn)::failed))
     in
-      List.app run tests
+      run tests []
     end
 end
 
@@ -222,19 +233,15 @@ fun main () =
     val largeIntPrecision = showPrecision LargeInt.precision
     val wordSize = Int.toString Word.wordSize
     val largeWordSize = Int.toString LargeWord.wordSize
-(*    val realPrecision = Int.toString Real.precision
-    val largeRealPrecision = Int.toString LargeReal.precision *)
     fun println s = print (s ^ "\n")
   in
     println ("Int.precision       = " ^ intPrecision);
     println ("LargeInt.precision  = " ^ largeIntPrecision);
     println ("Word.wordSize       = " ^ wordSize);
     println ("LargeWord.wordSize  = " ^ largeWordSize);
-(*    println ("Real.precision      = " ^ realPrecision);
-    println ("LargeReal.precision = " ^ largeRealPrecision); *)
     PackTest.doIt ();
     UnpackTest.doIt ();
-    println "\ndone."
+    println "done."
   end
 
 val _ = main ()
