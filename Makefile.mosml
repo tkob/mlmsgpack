@@ -1,0 +1,55 @@
+# Unix Makefile stub for separate compilation with Moscow ML.  
+
+MOSMLHOME=${HOME}/mosml
+MOSMLTOOLS=camlrunm $(MOSMLHOME)/share/mosml/tools
+MOSMLC=mosmlc -c
+MOSMLL=mosmlc
+MOSMLLEX=mosmllex
+MOSMLYACC=mosmlyac
+
+# this variable should list each unit in the program, 
+# in the correct order, with an indication of the mode (-structure or -toplevel) 
+# of each unit
+
+UNITS= -toplevel large mlmsgpack-aux realprinter-fail mlmsgpack mlmsgpack-test
+
+.SUFFIXES :
+.SUFFIXES : .sig .sml .ui .uo
+ 
+all: mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo mlmsgpack-test.uo
+
+mlmsgpack-test: large.uo mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo mlmsgpack-test.uo
+	mosmlc -o mlmsgpack-test mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo mlmsgpack-test.uo
+
+clean:
+	rm -f *.ui
+	rm -f *.uo
+	rm -f Makefile.mosml.bak
+
+# these rules are only needed if UNITS is undefined or empty
+.sig.ui:
+	$(MOSMLC) $<
+
+.sml.uo:
+	$(MOSMLC) $<
+
+depend: 
+	rm -f Makefile.bak
+	mv Makefile.mosml Makefile.mosml.bak
+	$(MOSMLTOOLS)/cutdeps < Makefile.mosml.bak > Makefile.mosml
+	$(MOSMLTOOLS)/mosmldep $(UNITS) >> Makefile.mosml
+
+### DO NOT DELETE THIS LINE
+large.uo: large.sml 
+	$(MOSMLC) -toplevel large.sml 
+mlmsgpack-aux.uo: mlmsgpack-aux.sml large.uo 
+	$(MOSMLC) -toplevel large.ui mlmsgpack-aux.sml 
+realprinter-fail.uo: realprinter-fail.sml mlmsgpack-aux.uo 
+	$(MOSMLC) -toplevel mlmsgpack-aux.ui \
+    large.ui realprinter-fail.sml 
+mlmsgpack.uo: mlmsgpack.sml realprinter-fail.uo 
+	$(MOSMLC) -toplevel realprinter-fail.ui \
+    mlmsgpack-aux.ui large.ui mlmsgpack.sml 
+mlmsgpack-test.uo: mlmsgpack-test.sml mlmsgpack.uo 
+	$(MOSMLC) -toplevel mlmsgpack.ui \
+    realprinter-fail.ui mlmsgpack-aux.ui large.ui mlmsgpack-test.sml 
