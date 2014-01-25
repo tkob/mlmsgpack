@@ -481,29 +481,44 @@ end = struct
       fun unpackInt16  f ins = unpackCategory2 isInt16  f ins
       fun unpackInt32  f ins = unpackCategory2 isInt32  f ins
       fun unpackInt64  f ins = unpackCategory2 isInt64  f ins
+
+      val minPos = Math.pow (2.0, ~1022.0 - 52.0)
+      val minPos32 = Math.pow (2.0, ~126.0 - 23.0)
      
       fun scanFloat bytes =
         let
           val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
-          val exponent = Real.fromInt (BitScannerInt.scan 1 8 bytes - 127)
-          val extraBit = 0x800000 (* 1 << 23 *)
-          val significand = Real.fromInt (BitScannerInt.scan 9 23 bytes + extraBit) * Math.pow(2.0, ~23.0)
+          val biasedExponent = BitScannerInt.scan 1 8 bytes
+          val exponent = Real.fromInt (biasedExponent - 127)
+          val extraBit = if biasedExponent = 0 then 0 else 0x800000 (* 1 << 23 *)
+          val significand' = BitScannerInt.scan 9 23 bytes
+          val significand = Real.fromInt (significand' + extraBit) * Math.pow(2.0, ~23.0)
         in
-          (* print ("sign="^Real.toString sign^"\n");
-          print ("exponent="^Real.toString exponent^"\n");
-          print ("significand="^Real.toString significand^"\n"); *)
-          sign * significand * Math.pow(2.0, exponent)
+          if biasedExponent = 255 then
+            if significand' = 0 then sign / 0.0 else 0.0 / 0.0
+          else if biasedExponent = 0 then
+            sign * minPos32 * Real.fromInt significand'
+          else
+            sign * significand * Math.pow(2.0, exponent)
         end
       fun scanDouble bytes =
         let
           val sign = if BitScannerInt.scan 0 1 bytes = 0 then 1.0 else ~1.0
-          val exponent = Real.fromInt (BitScannerInt.scan 1 11 bytes - 1023)
-          val extraBit = 0x4000000 (* 1 << 26 *)
-          val significandH = Real.fromInt (BitScannerInt.scan 12 26 bytes + extraBit) * Math.pow (2.0, ~26.0)
-          val significandL = Real.fromInt (BitScannerInt.scan 38 26 bytes) * Math.pow (2.0, ~52.0)
+          val biasedExponent = BitScannerInt.scan 1 11 bytes
+          val exponent = Real.fromInt (biasedExponent - 1023)
+          val extraBit = if biasedExponent = 0 then 0 else 0x4000000 (* 1 << 26 *)
+          val significandH' = BitScannerInt.scan 12 26 bytes
+          val significandL' = BitScannerInt.scan 38 26 bytes
+          val significandH = Real.fromInt (significandH' + extraBit) * Math.pow (2.0, ~26.0)
+          val significandL = Real.fromInt significandL' * Math.pow (2.0, ~52.0)
           val significand = significandH + significandL
         in
-          sign * significand * Math.pow(2.0, exponent)
+          if biasedExponent = 2047 then
+            if significandH' = 0 andalso significandL' = 0 then sign / 0.0 else 0.0 / 0.0
+          else if biasedExponent = 0 then
+            sign * minPos * (Real.fromInt significandH' * Math.pow (2.0, 26.0) + Real.fromInt significandL')
+          else
+            sign * significand * Math.pow(2.0, exponent)
         end
 
       fun unpackFloat  ins = unpackCategory2 isFloat  scanFloat  ins
