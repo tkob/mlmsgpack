@@ -90,7 +90,7 @@ Most functions do not work properly because of bugs of SML#.
 Status
 ------
 
-Not complete. Bin and ext are not supported yet.
+Ext is not supported yet.
 
 See Also
 --------
