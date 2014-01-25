@@ -16,7 +16,7 @@ UNITS= -toplevel large mlmsgpack-aux realprinter-fail mlmsgpack mlmsgpack-test
 .SUFFIXES :
 .SUFFIXES : .sig .sml .ui .uo
  
-all: mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo mlmsgpack-test.uo
+all: large.uo mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo
 
 mlmsgpack-test: large.uo mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo mlmsgpack-test.uo
 	mosmlc -o mlmsgpack-test mlmsgpack-aux.uo realprinter-fail.uo mlmsgpack.uo mlmsgpack-test.uo
@@ -34,7 +34,7 @@ clean:
 	$(MOSMLC) $<
 
 depend: 
-	rm -f Makefile.bak
+	rm -f Makefile.mosml.bak
 	mv Makefile.mosml Makefile.mosml.bak
 	$(MOSMLTOOLS)/cutdeps < Makefile.mosml.bak > Makefile.mosml
 	$(MOSMLTOOLS)/mosmldep $(UNITS) >> Makefile.mosml
