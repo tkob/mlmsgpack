@@ -573,6 +573,14 @@ end = struct
             => if isFixRaw byte then unpackRaw (lengthOfFixRaw byte) ins'
                else raise Unpack
         | NONE => raise Unpack
+      fun unpackRaw8 ins =
+        let
+          val ins' = expect (word8 0wxd9) ins
+          val (bytes, ins'') = S.inputN (ins', 1)
+          val length = Word8.toInt (Word8Vector.sub (bytes, 0))
+        in
+          unpackRaw length ins''
+        end
       fun unpackRaw16 ins = 
         let
           val ins' = expect (word8 0wxda) ins
@@ -592,6 +600,7 @@ end = struct
     in
       fun unpackBytes ins = (
            unpackFixRaw
+        || unpackRaw8
         || unpackRaw16
         || unpackRaw32
       ) ins
