@@ -67,7 +67,7 @@ SML/NJ and Moscow ML is fine if you don't use real values.
 
 #### SML/NJ
 
-Packing real values fail or produces imprecise results in some situations.
+Packing real values fail or produces imprecise results in some cases.
 
 #### Moscow ML
 
@@ -96,6 +96,6 @@ See Also
 --------
 
 There already exists another MessagePack implemenatation for SML, 
-called MsgPack-SML, which is targeted for Mlton.
+called MsgPack-SML, which is targeted for MLton.
 
 https://msgpacksml.codeplex.com/
