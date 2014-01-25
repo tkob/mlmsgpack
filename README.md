@@ -30,16 +30,14 @@ Use mlmsgpack.cm.
 
 #### Moscow ML
 
-First, you need LargeInt and LargeWord structures. The definition below will do.
+From the interactive shell, use .sml files in the following order.
 
-    structure LargeInt = Int
-    structure LargeWord = Word
-
-Then, use .sml files in the following order.
-
+- large.sml
 - mlmsgpack-aux.sml
 - realprinter-fail.sml
 - mlmsgpack.sml
+
+Makefile.mosml is also provided.
 
 #### HaMLet
 
@@ -64,11 +62,12 @@ From the interactive shell, use .sml files in the following order.
 Known Problems
 --------------
 
-Our recommendation is MLton, MLKit and Poly/ML. Moscow ML is also fine if you don't use real values.
+Our recommendation is MLton, MLKit and Poly/ML as all tests passed on them.
+SML/NJ and Moscow ML is fine if you don't use real values.
 
 #### SML/NJ
 
-Packing real values produces imprecise results in some situations.
+Packing real values fail or produces imprecise results in some situations.
 
 #### Moscow ML
 
@@ -86,12 +85,12 @@ Also, some unit tests fail.
 
 #### SMLSharp
 
-Several functions do not work properly because of bugs of SML#.
+Most functions do not work properly because of bugs of SML#.
 
 Status
 ------
 
-Not complete. Bin and ext are not supported yet. Float support is in beta stage.
+Not complete. Bin and ext are not supported yet.
 
 See Also
 --------
