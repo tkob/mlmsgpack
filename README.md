@@ -63,7 +63,7 @@ Known Problems
 --------------
 
 Our recommendation is MLton, MLKit and Poly/ML as all tests passed on them.
-SML/NJ and Moscow ML is fine if you don't use real values.
+SML/NJ and Moscow ML are fine if you don't use real values.
 
 #### SML/NJ
 
