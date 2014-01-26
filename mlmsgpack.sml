@@ -312,7 +312,7 @@ end = struct
   
     (* alternate *)
     infix 0 ||
-    fun (u1 || u2) ins = u1 ins handle Unpack => u2 ins
+    fun (u1 || u2) ins = u1 ins handle _ => u2 ins
 
     (* concatenate *)
     infix 5 --
@@ -605,40 +605,56 @@ end = struct
       fun isFixRaw byte = Word8.andb (byte, word8 0wxe0) = word8 0wxa0
       fun lengthOfFixRaw byte = Word8.toInt (Word8.andb (byte, word8 0wx1f))
 
-      fun scanRaw length ins = S.inputN (ins, length)
-      fun unpackFixRaw ins =
+      fun scanFixStr ins =
         case S.input1 ins of
           SOME (byte, ins')
-            => if isFixRaw byte then scanRaw (lengthOfFixRaw byte) ins'
+            => if isFixRaw byte then (lengthOfFixRaw byte, ins')
                else raise Unpack
         | NONE => raise Unpack
-      fun unpackRaw lengthSize pred ins =
+      fun scanRaw8 pred ins = 
         let
           val ins' = expect pred ins
-          val (bytes, ins'') = S.inputN (ins', lengthSize)
-          val length = Word8.toInt (Word8Vector.sub (bytes, 0)) handle Overflow => raise Size
         in
-          scanRaw length ins''
+          case S.input1 ins' of
+            SOME (byte, ins'') => (Word8.toInt byte, ins'')
+          | NONE => raise Unpack
         end
-      val unpackStr8  = unpackRaw 8  (word8 0wxd9)
-      val unpackStr16 = unpackRaw 16 (word8 0wxda)
-      val unpackStr32 = unpackRaw 32 (word8 0wxdb)
-      val unpackBin8  = unpackRaw 8  (word8 0wxc4)
-      val unpackBin16 = unpackRaw 16 (word8 0wxc5)
-      val unpackBin32 = unpackRaw 32 (word8 0wxc6)
+      fun scanRaw16 pred ins = 
+        let
+          val ins' = expect pred ins
+          val (bytes, ins'') = S.inputN (ins', 2)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          (length, ins'')
+        end
+      fun scanRaw32 pred ins = 
+        let
+          val ins' = expect pred ins
+          val (bytes, ins'') = S.inputN (ins', 4)
+          val length = UintScannerInt.scan bytes handle Overflow => raise Size
+        in
+          (length, ins'')
+        end
+      val scanStr8  = scanRaw8  (word8 0wxd9)
+      val scanStr16 = scanRaw16 (word8 0wxda)
+      val scanStr32 = scanRaw32 (word8 0wxdb)
+      val scanBin8  = scanRaw8  (word8 0wxc4)
+      val scanBin16 = scanRaw16 (word8 0wxc5)
+      val scanBin32 = scanRaw32 (word8 0wxc6)
     in
-      fun unpackBytesFromStr ins = (
-           unpackFixRaw
-        || unpackStr8
-        || unpackStr16
-        || unpackStr32
-      ) ins
+      fun unpackBytesFromStr ins =
+        let
+          val (length, ins') = (scanFixStr || scanStr8 || scanStr16 || scanStr32) ins
+        in
+          S.inputN (ins', length)
+        end
       val unpackString = unpackBytesFromStr >> Byte.bytesToString
-      fun unpackBytes ins = (
-           unpackBin8
-        || unpackBin16
-        || unpackBin32
-      ) ins
+      fun unpackBytes ins =
+        let
+          val (length, ins') = (scanBin8 || scanBin16 || scanBin32) ins
+        in
+          S.inputN (ins', length)
+        end
     end
 
     fun unpackOption u ins =
