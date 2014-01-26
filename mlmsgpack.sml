@@ -22,6 +22,8 @@ functor MessagePack(S : sig
     val packTuple5 : 'a packer * 'b packer * 'c packer * 'd packer * 'e packer -> ('a * 'b * 'c * 'd * 'e) packer
     val packTuple6 : 'a packer * 'b packer * 'c packer * 'd packer * 'e packer * 'f packer -> ('a * 'b * 'c * 'd * 'e * 'f) packer
 
+    val packPairList : ('a packer * 'b packer) -> ('a * 'b) list packer
+
     val packUnit   : unit packer
     val packBool   : bool packer
     val packInt    : int packer
@@ -51,8 +53,8 @@ functor MessagePack(S : sig
     val unpackTuple5 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker * 'e unpacker -> ('a * 'b * 'c * 'd * 'e) unpacker
     val unpackTuple6 : 'a unpacker * 'b unpacker * 'c unpacker * 'd unpacker * 'e unpacker * 'f unpacker -> ('a * 'b * 'c * 'd * 'e * 'f) unpacker
 
-    val unpackMapFold : ('a unpacker * 'b unpacker)-> ('a * 'b * 'c -> 'c) -> 'c -> 'c unpacker
-    val unpackPairList : ('a unpacker * 'b unpacker)-> ('a * 'b) list unpacker
+    val unpackMapFold : ('a unpacker * 'b unpacker) -> ('a * 'b * 'c -> 'c) -> 'c -> 'c unpacker
+    val unpackPairList : ('a unpacker * 'b unpacker) -> ('a * 'b) list unpacker
   
     val unpackUnit : unit unpacker
     val unpackBool : bool unpacker
@@ -90,6 +92,7 @@ end = struct
 
   val word8 = Word8.fromLarge o Word.toLarge
   fun fixArray length = Word8.orb (word8 0wx90, Word8.fromInt length)
+  fun fixMap   length = Word8.orb (word8 0wx80, Word8.fromInt length)
 
   structure Pack = struct
     exception Pack
@@ -102,19 +105,17 @@ end = struct
       (* with the expectation that the compiler will optimize this idiom *)
       val fromWord8ToWord = Word.fromLarge o Word8.toLarge
       val fromWordToWord8 = Word8.fromLarge o Word.toLarge
-      fun outputFixArray length outs =
-        S.output1 (outs, fixArray length)
-      fun outputLength length outs =
+      fun outputLength (fix, len16, len32) length outs =
         if length < 0x10 then
-          (* FixArray *) 
-          outputFixArray length outs
+          (* Fix *) 
+          S.output1 (outs, fix length)
         else if length < 0x10000 then
-          (* array 16 *)
-          (S.output1 (outs, word8 0wxdc);
+          (* 16 *)
+          (S.output1 (outs, len16);
           UintPrinterIntWord.print length 2 outs)
         else if length div 0x10000 div 0x10000 = 0 then
-          (* array 32 *)
-          (S.output1 (outs, word8 0wxdd);
+          (* 32 *)
+          (S.output1 (outs, len32);
           if Word.wordSize >= 32 then
             UintPrinterIntWord.print length 4 outs
           else if LargeWord.wordSize >= 32 then
@@ -123,17 +124,14 @@ end = struct
             UintPrinterInfInt.print length 4 outs)
         else 
           raise Size;
-      fun packListLike length app p values outs =
-        let
-          val length = length values
-        in
-          outputLength length outs;
-          app (fn value => p value outs) values
-        end
+      fun outputArrayLength length outs =
+        outputLength (fixArray, word8 0wxdc, word8 0wxdd) length outs
+      fun outputMapLength length outs =
+        outputLength (fixMap,   word8 0wxde, word8 0wxdf) length outs
     in
-      fun packList   p values outs = packListLike List.length   List.app   p values outs
-      fun packVector p values outs = packListLike Vector.length Vector.app p values outs
-      fun packArray  p values outs = packListLike Array.length  Array.app  p values outs
+      fun packList   p values outs = (outputArrayLength (List.length values)   outs; List.app   (fn v => p v outs) values)
+      fun packVector p values outs = (outputArrayLength (Vector.length values) outs; Vector.app (fn v => p v outs) values)
+      fun packArray  p values outs = (outputArrayLength (Array.length values)  outs; Array.app  (fn v => p v outs) values)
       fun packArrayTabulate p (n, f) outs =
         let
           fun loop i =
@@ -141,24 +139,29 @@ end = struct
             else
               p (f i) outs
         in
+          outputArrayLength n outs;
           loop 0
         end
   
       fun packPair (p1, p2) (v1, v2) outs =
-        (outputFixArray 2 outs;
+        (outputArrayLength 2 outs;
         p1 v1 outs; p2 v2 outs)
       fun packTuple3 (p1, p2, p3) (v1, v2, v3) outs =
-        (outputFixArray 3 outs;
+        (outputArrayLength 3 outs;
         p1 v1 outs; p2 v2 outs; p3 v3 outs)
       fun packTuple4 (p1, p2, p3, p4) (v1, v2, v3, v4) outs =
-        (outputFixArray 4 outs;
+        (outputArrayLength 4 outs;
         p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs)
       fun packTuple5 (p1, p2, p3, p4, p5) (v1, v2, v3, v4, v5) outs =
-        (outputFixArray 5 outs;
+        (outputArrayLength 5 outs;
         p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs; p5 v5 outs)
       fun packTuple6 (p1, p2, p3, p4, p5, p6) (v1, v2, v3, v4, v5, v6) outs =
-        (outputFixArray 6 outs;
+        (outputArrayLength 6 outs;
         p1 v1 outs; p2 v2 outs; p3 v3 outs; p4 v4 outs; p5 v5 outs; p6 v6 outs)
+
+      fun packPairList (p1, p2) values outs =
+        (outputMapLength (List.length values) outs;
+        app (fn (v1, v2) => (p1 v1 outs; p2 v2 outs)) values)
 
       fun packUnit () outs = S.output1 (outs, word8 0wxc0)
       fun packBool bool outs =
