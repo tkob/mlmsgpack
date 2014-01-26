@@ -42,6 +42,7 @@ functor MessagePack(S : sig
     val doUnpack : 'a unpacker -> S.instream -> 'a * S.instream
   
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
+    val >> : 'a unpacker * ('a -> 'b) -> 'b unpacker
 
     val unpackArrayFold : 'a unpacker -> ('a * 'b -> 'b) -> 'b -> 'b unpacker
     val unpackList   : 'a unpacker -> 'a list unpacker
