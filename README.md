@@ -110,3 +110,9 @@ There already exists another MessagePack implemenatation for SML,
 called MsgPack-SML, which is targeted for MLton.
 
 https://msgpacksml.codeplex.com/
+
+ML-MessagePack is written from scratch and not a fork of MsgPack-SML.
+
+For information on MessagePack, see:
+
+http://msgpack.org/
