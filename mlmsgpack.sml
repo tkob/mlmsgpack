@@ -23,6 +23,7 @@ functor MessagePack(S : sig
     val packTuple6 : 'a packer * 'b packer * 'c packer * 'd packer * 'e packer * 'f packer -> ('a * 'b * 'c * 'd * 'e * 'f) packer
 
     val packPairList : ('a packer * 'b packer) -> ('a * 'b) list packer
+    val packMapTabulate : ('a packer * 'b packer) -> (int * (int -> 'a * 'b)) packer
 
     val packUnit   : unit packer
     val packBool   : bool packer
@@ -162,6 +163,19 @@ end = struct
       fun packPairList (p1, p2) values outs =
         (outputMapLength (List.length values) outs;
         app (fn (v1, v2) => (p1 v1 outs; p2 v2 outs)) values)
+      fun packMapTabulate (p1, p2) (n, f) outs =
+        let
+          fun loop i =
+            if i >= n then ()
+            else
+              let val (v1, v2) = f i in
+                p1 v1 outs;
+                p2 v2 outs
+             end
+        in
+          outputMapLength n outs;
+          loop 0
+        end
 
       fun packUnit () outs = S.output1 (outs, word8 0wxc0)
       fun packBool bool outs =
