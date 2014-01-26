@@ -82,16 +82,6 @@ end = struct
 
   structure RealPrinter = RealPrinter(S)
 
-  structure IntMP = struct
-    datatype int = Int of Int.int
-                 | LargeInt of LargeInt.int
-                 | Word8 of Word8.word
-                 | Word of Word.word
-                 | LargeWord of LargeWord.word
-                 | Word8Vector of Word8Vector.vector
-                 | Word8VectorSlice of Word8VectorSlice.slice
-  end
-
   val word8 = Word8.fromLarge o Word.toLarge
   fun fixArray length = Word8.orb (word8 0wx90, Word8.fromInt length)
   fun fixMap   length = Word8.orb (word8 0wx80, Word8.fromInt length)
