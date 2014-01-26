@@ -26,6 +26,7 @@ functor MessagePack(S : sig
     val packBool   : bool packer
     val packInt    : int packer
     val packReal   : real packer
+
     val packBytes  : Word8Vector.vector packer
 
     val packOption : 'a packer -> 'a option packer
@@ -56,6 +57,9 @@ functor MessagePack(S : sig
     val unpackInt : int unpacker
     val unpackLargeInt : LargeInt.int unpacker
     val unpackReal : real unpacker
+
+    val unpackString : string unpacker
+    val unpackBytesFromStr : Word8Vector.vector unpacker
     val unpackBytes : Word8Vector.vector unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
@@ -564,45 +568,42 @@ end = struct
     end
 
     local
-      fun unpackRaw length ins = S.inputN (ins, length)
       fun isFixRaw byte = Word8.andb (byte, word8 0wxe0) = word8 0wxa0
       fun lengthOfFixRaw byte = Word8.toInt (Word8.andb (byte, word8 0wx1f))
+
+      fun scanRaw length ins = S.inputN (ins, length)
       fun unpackFixRaw ins =
         case S.input1 ins of
           SOME (byte, ins')
-            => if isFixRaw byte then unpackRaw (lengthOfFixRaw byte) ins'
+            => if isFixRaw byte then scanRaw (lengthOfFixRaw byte) ins'
                else raise Unpack
         | NONE => raise Unpack
-      fun unpackRaw8 ins =
+      fun unpackRaw lengthSize pred ins =
         let
-          val ins' = expect (word8 0wxd9) ins
-          val (bytes, ins'') = S.inputN (ins', 1)
-          val length = Word8.toInt (Word8Vector.sub (bytes, 0))
+          val ins' = expect pred ins
+          val (bytes, ins'') = S.inputN (ins', lengthSize)
+          val length = Word8.toInt (Word8Vector.sub (bytes, 0)) handle Overflow => raise Size
         in
-          unpackRaw length ins''
+          scanRaw length ins''
         end
-      fun unpackRaw16 ins = 
-        let
-          val ins' = expect (word8 0wxda) ins
-          val (bytes, ins'') = S.inputN (ins', 2)
-          val length = UintScannerInt.scan bytes handle Overflow => raise Size
-        in
-          unpackRaw length ins''
-        end
-      fun unpackRaw32 ins = 
-        let
-          val ins' = expect (word8 0wxdb) ins
-          val (bytes, ins'') = S.inputN (ins', 4)
-          val length = UintScannerInt.scan bytes handle Overflow => raise Size
-        in
-          unpackRaw length ins''
-        end
+      val unpackStr8  = unpackRaw 8  0wxd9
+      val unpackStr16 = unpackRaw 16 0wxda
+      val unpackStr32 = unpackRaw 32 0wxdb
+      val unpackBin8  = unpackRaw 8  0wxc4
+      val unpackBin16 = unpackRaw 16 0wxc5
+      val unpackBin32 = unpackRaw 32 0wxc6
     in
-      fun unpackBytes ins = (
+      fun unpackBytesFromStr ins = (
            unpackFixRaw
-        || unpackRaw8
-        || unpackRaw16
-        || unpackRaw32
+        || unpackStr8
+        || unpackStr16
+        || unpackStr32
+      ) ins
+      val unpackString = unpackBytesFromStr >> Byte.bytesToString
+      fun unpackBytes ins = (
+           unpackBin8
+        || unpackBin16
+        || unpackBin32
       ) ins
     end
 
@@ -638,6 +639,78 @@ end = struct
 end
 *)
 
+structure BytesIO = struct
+  datatype bytesList = Nil | ConsA of int ref * Word8Array.array * bytesList | ConsV of Word8Vector.vector * bytesList
+  type instream = Word8VectorSlice.slice
+  type outstream = bytesList ref
+  val word8 = Word8.fromLarge o Word.toLarge
+  fun input1 slice =
+    if Word8VectorSlice.length slice = 0 then NONE
+    else SOME (Word8VectorSlice.sub (slice, 0), Word8VectorSlice.subslice (slice, 1, NONE))
+  fun inputN (slice, n) =
+    let
+      val vector = Word8VectorSlice.vector (Word8VectorSlice.subslice (slice, 0, SOME n))
+      val slice' = Word8VectorSlice.subslice (slice, n, NONE)
+    in
+      (vector, slice')
+    end
+
+  val chunkSize = ref 256
+
+  local
+    fun extendAndSet1 (outs as ref bytesList, byte) =
+      let
+        val newArray = Word8Array.array (!chunkSize, word8 0wx00)
+      in
+        Word8Array.update (newArray, 0, byte);
+        outs := ConsA (ref 1, newArray, bytesList)
+      end
+  in
+    fun output1 (outs as ref (ConsA (posRef as ref pos, array, _)), byte) =
+      if pos < Word8Array.length array then
+        (Word8Array.update (array, pos, byte);
+        posRef := pos + 1)
+      else extendAndSet1 (outs, byte)
+      | output1 (outs, byte) = extendAndSet1 (outs, byte)
+  end
+
+  local
+    fun extendWithVector (outs as ref bytesList, bytes) =
+      outs := ConsV (bytes, bytesList)
+  in
+    fun output (outs as ref (ConsA (posRef as ref pos, array, _)), bytes) =
+      let
+        val bytesLength = Word8Vector.length bytes
+      in
+        if pos + bytesLength <= Word8Array.length array then
+          (Word8Array.copyVec { src = bytes, dst = array, di = pos };
+          posRef := pos + bytesLength)
+        else extendWithVector (outs, bytes)
+      end
+      | output (outs, bytes) = extendWithVector (outs, bytes)
+  end
+
+  fun mkOutstream () = ref Nil
+
+  fun fromBytes bytes = Word8VectorSlice.full bytes
+  fun fromString string = fromBytes (Byte.stringToBytes string)
+  fun toBytes outs =
+    let
+      fun toVectors Nil vectors = vectors
+        | toVectors (ConsV (vector, bytesList)) vectors = toVectors bytesList (vector::vectors)
+        | toVectors (ConsA (ref pos, array, bytesList)) vectors =
+        let
+          val vector = Word8Vector.tabulate (pos, fn n => Word8Array.sub (array, n))
+        in
+          toVectors bytesList (vector::vectors)
+        end
+      val vectors = toVectors (!outs) []
+    in
+      Word8Vector.concat vectors
+    end
+  fun toString outs = Byte.bytesToString (toBytes outs)
+end
+
 structure IntListIO = struct
   type instream = int list
   type outstream = int list ref
@@ -661,3 +734,4 @@ end
 (* structure MessagePackBinIO = MessagePack(structure PR = PR; structure S = BinIO.StreamIO)
 structure MessagePackBinTextIO = MessagePack(structure PR = PR; structure S = BinTextIO) *)
 structure MessagePackIntListIO = MessagePack(IntListIO)
+structure MessagePackBytesIO = MessagePack(BytesIO)
