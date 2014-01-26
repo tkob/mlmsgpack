@@ -57,7 +57,18 @@ From the interactive shell, use .sml files in the following order.
 
 #### SMLSharp
 
-.smi files are provided. Require mlmsgpack.smi from your .smi file.
+For separate compilation, .smi files are provided. Require mlmsgpack.smi from your .smi file.
+
+From the interactive shell, use .sml files in the following order.
+
+- mlmsgpack-aux.sml
+- realprinter-default.sml
+- mlmsgpack.sml
+
+Tutorial
+--------
+
+See TUTORIAL.md.
 
 Known Problems
 --------------
