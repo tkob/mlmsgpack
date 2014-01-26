@@ -88,7 +88,7 @@ ML-MessagePack maps ('a * 'b) list to Map type of MessagePack:
     > BytesIO.toBytes outs;
     val it = fromList[0wx82, 0wx1, 0wxC3, 0wx2, 0wxC2] : Word8Vector.vector
 
-Be warned that `packPair (packInt, packBool)' and `packPairList (packInt, packBool)' are not same even though they both are of type `(int * bool) list packer'.
+Be warned that `packPair (packInt, packBool)` and `packPairList (packInt, packBool)` are not same even though they both are of type `(int * bool) list packer`.
 The former produces Array of MessagePack and the latter produces Map of MessageType.
 
 ## Unpacking values
@@ -151,7 +151,7 @@ In such situation, >> combinator can be used:
     val it = (0.0, fromList[]) : real * BytesIO.instream
 
 The combinator takes 'a unpacker and a function of ('a -> 'b) and makes 'b unpacker.
-Since unpackInt is an int unpacker and Real.fromInt is of type `int -> real', `unpackInt >> Real.fromInt' is a real unpacker.
+Since unpackInt is an int unpacker and Real.fromInt is of type `int -> real`, `unpackInt >> Real.fromInt` is a real unpacker.
 
 ## Online processing
 
