@@ -27,6 +27,8 @@ functor MessagePack(S : sig
     val packInt    : int packer
     val packReal   : real packer
 
+    val packString : string packer
+    val packBytesToStr : Word8Vector.vector packer
     val packBytes  : Word8Vector.vector packer
 
     val packOption : 'a packer -> 'a option packer
@@ -239,28 +241,43 @@ end = struct
         raise Pack;
       RealPrinter.print real outs)
 
-    fun packBytes bytes outs =
-      let val length = Word8Vector.length bytes in
-        if length < 32 then
-          (* FixRaw *)
-          S.output1 (outs, (Word8.orb (word8 0wxa0, Word8.fromInt length)))
-        else if length div 0x10000 = 0 then
-          (* raw 16 *)
-          (S.output1 (outs, word8 0wxda);
-          UintPrinterIntWord.print length 2 outs)
-        else if length div 0x10000 div 0x10000 = 0 then
-          (* raw 32 *)
-          (S.output1 (outs, word8 0wxdb);
-          if Word.wordSize >= 32 then
-            UintPrinterIntWord.print length 4 outs
-          else if LargeWord.wordSize >= 32 then
-            UintPrinterIntLargeWord.print length 4 outs
+    local
+      fun packRaw (raw8, raw16, raw32) bytes outs =
+        let val length = Word8Vector.length bytes in
+          if length < 0x100 then
+            (* raw 8 *)
+            (S.output1 (outs, raw8);
+            S.output1 (outs, Word8.fromInt length))
+          else if length div 0x10000 = 0 then
+            (* raw 16 *)
+            (S.output1 (outs, raw16);
+            UintPrinterIntWord.print length 2 outs)
+          else if length div 0x10000 div 0x10000 = 0 then
+            (* raw 32 *)
+            (S.output1 (outs, raw32);
+            if Word.wordSize >= 32 then
+              UintPrinterIntWord.print length 4 outs
+            else if LargeWord.wordSize >= 32 then
+              UintPrinterIntLargeWord.print length 4 outs
+            else
+              UintPrinterInfInt.print length 4 outs)
           else
-            UintPrinterInfInt.print length 4 outs)
-        else
-          raise Size;
-        S.output (outs, bytes)
-      end
+            raise Size;
+          S.output (outs, bytes)
+        end
+    in
+      fun packBytesToStr bytes outs =
+        let val length = Word8Vector.length bytes in
+          if length < 32 then
+            (* FixStr *)
+            S.output1 (outs, (Word8.orb (word8 0wxa0, Word8.fromInt length)))
+          else
+            packRaw (word8 0wxd9, word8 0wxda, word8 0wxdb) bytes outs;
+          S.output (outs, bytes)
+        end
+      fun packString string outs = packBytesToStr (Byte.stringToBytes string) outs
+      fun packBytes bytes outs = packRaw (word8 0wxc4, word8 0wxc5, word8 0wxc6) bytes outs
+    end
 
     fun packOption p option outs =
       case option of 
