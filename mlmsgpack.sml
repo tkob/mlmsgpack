@@ -586,12 +586,12 @@ end = struct
         in
           scanRaw length ins''
         end
-      val unpackStr8  = unpackRaw 8  0wxd9
-      val unpackStr16 = unpackRaw 16 0wxda
-      val unpackStr32 = unpackRaw 32 0wxdb
-      val unpackBin8  = unpackRaw 8  0wxc4
-      val unpackBin16 = unpackRaw 16 0wxc5
-      val unpackBin32 = unpackRaw 32 0wxc6
+      val unpackStr8  = unpackRaw 8  (word8 0wxd9)
+      val unpackStr16 = unpackRaw 16 (word8 0wxda)
+      val unpackStr32 = unpackRaw 32 (word8 0wxdb)
+      val unpackBin8  = unpackRaw 8  (word8 0wxc4)
+      val unpackBin16 = unpackRaw 16 (word8 0wxc5)
+      val unpackBin32 = unpackRaw 32 (word8 0wxc6)
     in
       fun unpackBytesFromStr ins = (
            unpackFixRaw
@@ -640,9 +640,9 @@ end
 *)
 
 structure BytesIO = struct
-  datatype bytesList = Nil | ConsA of int ref * Word8Array.array * bytesList | ConsV of Word8Vector.vector * bytesList
+  datatype bytes_list = Nil | ConsA of int ref * Word8Array.array * bytes_list | ConsV of Word8Vector.vector * bytes_list
   type instream = Word8VectorSlice.slice
-  type outstream = bytesList ref
+  type outstream = bytes_list ref
   val word8 = Word8.fromLarge o Word.toLarge
   fun input1 slice =
     if Word8VectorSlice.length slice = 0 then NONE
