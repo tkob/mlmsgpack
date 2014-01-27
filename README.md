@@ -7,7 +7,7 @@ Features
 --------
 
 - Portable: Depends only on the required components of the SML Basis Library specification.
-- Composable: Encoder and decoder are composable by combinators.
+- Composable: Composable combinators for encoding and decoding.
 
 Usage
 -----
@@ -87,7 +87,7 @@ Packing real values is not supported, since some components of the SML Basis Lib
 #### HaMLet
 
 Packing real values is not supported, since some components of the SML Basis Library are not provided.
-Some functions are very slow, although they works properly. (We tested HaMLet compiled with MLton.)
+Some functions are very slow, although they work properly. (We tested HaMLet compiled with MLton.)
 
 #### Alice ML
 
