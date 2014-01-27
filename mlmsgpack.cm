@@ -3,6 +3,8 @@ Library
 
   structure IntListIO
   structure MessagePackIntListIO
+  structure BytesIO
+  structure MessagePackBytesIO
 is
   mlmsgpack-aux.sml
   realprinter-default.sml
