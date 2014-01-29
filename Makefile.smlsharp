@@ -1,0 +1,30 @@
+# Makefile for separate compilation with SML#.
+
+SMLSHARP = smlsharp
+SMLSHARPFLAGS = 
+DEPEND = Makefile.smlsharp.depend
+
+EXEC = mlmsgpack-test
+SRCS = \
+	mlmsgpack-aux.sml \
+	realprinter-default.sml \
+	mlmsgpack.sml \
+	mlmsgpack-test.sml
+
+OBJS = $(SRCS:.sml=.o)
+
+all: $(EXEC)
+
+$(EXEC): $(EXEC).smi $(OBJS)
+	$(SMLSHARP) $(SMLSHARPFLAGS) -o $@ $(EXEC).smi
+
+%.o: %.sml
+	$(SMLSHARP) $(SMLSHARPFLAGS) -c $<
+
+depend: 
+	$(SMLSHARP) -MM $(SRCS) > $(DEPEND)
+
+include $(DEPEND)
+
+clean:
+	rm -f $(OBJS) $(EXEC)

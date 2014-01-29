@@ -1,0 +1,7 @@
+mlmsgpack-aux.o: mlmsgpack-aux.sml mlmsgpack-aux.smi
+realprinter-default.o: realprinter-default.sml mlmsgpack-aux.smi \
+  realprinter-default.smi
+mlmsgpack.o: mlmsgpack.sml mlmsgpack-aux.smi realprinter-default.smi \
+  mlmsgpack.smi
+mlmsgpack-test.o: mlmsgpack-test.sml mlmsgpack-aux.smi realprinter-default.smi \
+  mlmsgpack.smi mlmsgpack-test.smi
