@@ -73,7 +73,7 @@ See TUTORIAL.md.
 Known Problems
 --------------
 
-Our recommendation is MLton, MLKit and Poly/ML as all tests passed on them.
+Our recommendation is MLton, MLKit, Poly/ML and SML#(>=2.0.0) as all tests passed on them.
 SML/NJ and Moscow ML are fine if you don't use real values.
 
 #### SML/NJ
@@ -96,7 +96,7 @@ Also, some unit tests fail.
 
 #### SMLSharp
 
-Most functions do not work properly because of bugs of SML#.
+Most functions do not work properly because of bugs of SML# prior to version 2.0.0.
 
 Status
 ------
