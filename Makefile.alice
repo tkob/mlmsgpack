@@ -1,0 +1,16 @@
+SRCS = \
+	mlmsgpack-aux.sml \
+	realprinter-fail.sml \
+	mlmsgpack.sml \
+	mlmsgpack-test.sml
+
+OBJS = $(SRCS:.sml=.alc)
+
+all: $(OBJS)
+
+%.alc:	%.sml 
+	alicec --dependency-file Makefile.alice.depend --no-warn-conventions $< -o $@ 
+
+clean:
+	rm -f $(OBJS)
+

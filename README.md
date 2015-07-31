@@ -49,11 +49,12 @@ From the interactive shell, use .sml files in the following order.
 
 #### Alice ML
 
-From the interactive shell, use .sml files in the following order.
+Makefile.alice is provided.
 
-- mlmsgpack-aux.sml
-- realprinter-fail.sml
-- mlmsgpack.sml
+```
+make -f Makefile.alice
+alicerun mlmsgpack-test
+```
 
 #### SMLSharp
 

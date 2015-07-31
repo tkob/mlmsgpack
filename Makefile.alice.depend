@@ -1,0 +1,2 @@
+mlmsgpack.alc: mlmsgpack-aux.alc realprinter-fail.alc
+mlmsgpack-test.alc: mlmsgpack.alc mlmsgpack-aux.alc realprinter-fail.alc
