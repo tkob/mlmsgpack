@@ -95,7 +95,7 @@ Some functions are very slow, although they work properly. (We tested HaMLet com
 Packing real values is not supported, since some components of the SML Basis Library are not provided.
 Also, some unit tests fail.
 
-#### SMLSharp
+#### SML# ####
 
 Most functions do not work properly because of bugs of SML# prior to version 2.0.0.
 
