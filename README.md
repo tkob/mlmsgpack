@@ -56,7 +56,7 @@ make -f Makefile.alice
 alicerun mlmsgpack-test
 ```
 
-#### SMLSharp
+#### SML# ####
 
 For separate compilation, .smi files are provided. Require mlmsgpack.smi from your .smi file.
 
