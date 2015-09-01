@@ -250,7 +250,7 @@ end = struct
       RealPrinter.print real outs)
 
     local
-      fun packRaw (raw8, raw16, raw32) bytes outs =
+      fun packRaw (raw8, raw16, raw32, typ) bytes outs =
         let val length = Word8Vector.length bytes in
           if length < 0x100 then
             (* raw 8 *)
@@ -271,8 +271,10 @@ end = struct
               UintPrinterInfInt.print length 4 outs)
           else
             raise Size;
+          S.output (outs, typ);
           S.output (outs, bytes)
         end
+      val emptyBytes = Word8Vector.fromList []
     in
       fun packBytesToStr bytes outs =
         let val length = Word8Vector.length bytes in
@@ -280,11 +282,11 @@ end = struct
             (* FixStr *)
             S.output1 (outs, (Word8.orb (word8 0wxa0, Word8.fromInt length)))
           else
-            packRaw (word8 0wxd9, word8 0wxda, word8 0wxdb) bytes outs;
+            packRaw (word8 0wxd9, word8 0wxda, word8 0wxdb, emptyBytes) bytes outs;
           S.output (outs, bytes)
         end
       fun packString string outs = packBytesToStr (Byte.stringToBytes string) outs
-      fun packBytes bytes outs = packRaw (word8 0wxc4, word8 0wxc5, word8 0wxc6) bytes outs
+      fun packBytes bytes outs = packRaw (word8 0wxc4, word8 0wxc5, word8 0wxc6, emptyBytes) bytes outs
     end
 
     fun packOption p option outs =
