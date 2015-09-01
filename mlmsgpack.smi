@@ -38,6 +38,8 @@ functor MessagePack(S : sig
     val packBytesToStr : Word8Vector.vector packer
     val packBytes  : Word8Vector.vector packer
 
+    val packExt : int -> Word8Vector.vector packer
+
     val packOption : 'a packer -> 'a option packer
   end
 
@@ -110,6 +112,8 @@ structure MessagePackIntListIO = struct
     val packInt    : int packer
     val packReal   : real packer
     val packBytes  : Word8Vector.vector packer
+
+    val packExt : int -> Word8Vector.vector packer
 
     val packOption : 'a packer -> 'a option packer
   end

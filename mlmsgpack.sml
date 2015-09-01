@@ -34,6 +34,8 @@ functor MessagePack(S : sig
     val packBytesToStr : Word8Vector.vector packer
     val packBytes  : Word8Vector.vector packer
 
+    val packExt : int -> Word8Vector.vector packer
+
     val packOption : 'a packer -> 'a option packer
   end
   structure Unpack : sig
@@ -287,6 +289,29 @@ end = struct
         end
       fun packString string outs = packBytesToStr (Byte.stringToBytes string) outs
       fun packBytes bytes outs = packRaw (word8 0wxc4, word8 0wxc5, word8 0wxc6, emptyBytes) bytes outs
+
+      fun packExt typ bytes outs =
+        let
+          val length = Word8Vector.length bytes
+          val typByte = Word8.fromInt typ
+        in
+          if length = 1 then
+            (S.output1 (outs, word8 0wxd4); S.output1 (outs, typByte); S.output (outs, bytes))
+          else if length = 2 then
+            (S.output1 (outs, word8 0wxd5); S.output1 (outs, typByte); S.output (outs, bytes))
+          else if length = 4 then
+            (S.output1 (outs, word8 0wxd6); S.output1 (outs, typByte); S.output (outs, bytes))
+          else if length = 8 then
+            (S.output1 (outs, word8 0wxd7); S.output1 (outs, typByte); S.output (outs, bytes))
+          else if length = 16 then
+            (S.output1 (outs, word8 0wxd8); S.output1 (outs, typByte); S.output (outs, bytes))
+          else
+            let
+              val typVector = Word8Vector.tabulate (1, fn _ => typByte)
+            in
+              packRaw (word8 0wxc7, word8 0wxc8, word8 0wxc9, typVector) bytes outs
+            end
+        end
     end
 
     fun packOption p option outs =
