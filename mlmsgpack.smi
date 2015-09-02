@@ -74,6 +74,7 @@ functor MessagePack(S : sig
     val unpackString : string unpacker
     val unpackBytesFromStr : Word8Vector.vector unpacker
     val unpackBytes : Word8Vector.vector unpacker
+    val unpackExt : (int * Word8Vector.vector) unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
   end
@@ -145,6 +146,7 @@ structure MessagePackIntListIO = struct
     val unpackLargeInt : LargeInt.int unpacker
     val unpackReal : real unpacker
     val unpackBytes : Word8Vector.vector unpacker
+    val unpackExt : (int * Word8Vector.vector) unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
   end

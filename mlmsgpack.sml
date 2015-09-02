@@ -69,6 +69,7 @@ functor MessagePack(S : sig
     val unpackString : string unpacker
     val unpackBytesFromStr : Word8Vector.vector unpacker
     val unpackBytes : Word8Vector.vector unpacker
+    val unpackExt : (int * Word8Vector.vector) unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
   end
@@ -659,6 +660,15 @@ end = struct
       val scanBin8  = scanRaw8  (word8 0wxc4)
       val scanBin16 = scanRaw16 (word8 0wxc5)
       val scanBin32 = scanRaw32 (word8 0wxc6)
+
+      fun scanFixExt1 ins = (1, expect (word8 0wxd4) ins)
+      fun scanFixExt2 ins = (2, expect (word8 0wxd5) ins)
+      fun scanFixExt4 ins = (4, expect (word8 0wxd6) ins)
+      fun scanFixExt8 ins = (8, expect (word8 0wxd7) ins)
+      fun scanFixExt16 ins = (16, expect (word8 0wxd8) ins)
+      val scanExt8  = scanRaw8 (word8 0wxc7)
+      val scanExt16 = scanRaw8 (word8 0wxc8)
+      val scanExt32 = scanRaw8 (word8 0wxc9)
     in
       fun unpackBytesFromStr ins =
         let
@@ -672,6 +682,16 @@ end = struct
           val (length, ins') = (scanBin8 || scanBin16 || scanBin32) ins
         in
           S.inputN (ins', length)
+        end
+      fun unpackExt ins =
+        let
+          val (length, ins') = (
+               scanFixExt1 || scanFixExt2 || scanFixExt4 || scanFixExt8 || scanFixExt16
+            || scanExt8 || scanExt16 || scanExt32) ins
+          val (typ, ins'') = case S.input1 ins of SOME x => x | NONE => raise Unpack
+          val (bytes, ins''') = S.inputN (ins'', length)
+        in
+          ((Word8.toInt typ, bytes), ins''')
         end
     end
 
