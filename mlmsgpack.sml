@@ -70,6 +70,7 @@ functor MessagePack(S : sig
     val unpackBytesFromStr : Word8Vector.vector unpacker
     val unpackBytes : Word8Vector.vector unpacker
     val unpackExt : (int * Word8Vector.vector) unpacker
+    val unpackExtOfType : int -> Word8Vector.vector unpacker
 
     val unpackOption : 'a unpacker -> 'a option unpacker
   end
@@ -692,6 +693,15 @@ end = struct
           val (bytes, ins''') = S.inputN (ins'', length)
         in
           ((Word8.toInt typ, bytes), ins''')
+        end
+      fun unpackExtOfType typ ins =
+        let
+          val (length, ins') = (
+               scanFixExt1 || scanFixExt2 || scanFixExt4 || scanFixExt8 || scanFixExt16
+            || scanExt8 || scanExt16 || scanExt32) ins
+          val ins'' = expect (Word8.fromInt typ) ins'
+        in
+          S.inputN (ins'', length)
         end
     end
 
