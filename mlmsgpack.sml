@@ -34,7 +34,7 @@ functor MessagePack(S : sig
     val packBytesToStr : Word8Vector.vector packer
     val packBytes  : Word8Vector.vector packer
 
-    val packExt : int -> Word8Vector.vector packer
+    val packExtOfType : int -> Word8Vector.vector packer
 
     val packOption : 'a packer -> 'a option packer
   end
@@ -292,7 +292,7 @@ end = struct
       fun packString string outs = packBytesToStr (Byte.stringToBytes string) outs
       fun packBytes bytes outs = packRaw (word8 0wxc4, word8 0wxc5, word8 0wxc6, emptyBytes) bytes outs
 
-      fun packExt typ bytes outs =
+      fun packExtOfType typ bytes outs =
         let
           val length = Word8Vector.length bytes
           val typByte = Word8.fromInt typ
