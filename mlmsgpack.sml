@@ -668,8 +668,8 @@ end = struct
       fun scanFixExt8 ins = (8, expect (word8 0wxd7) ins)
       fun scanFixExt16 ins = (16, expect (word8 0wxd8) ins)
       val scanExt8  = scanRaw8 (word8 0wxc7)
-      val scanExt16 = scanRaw8 (word8 0wxc8)
-      val scanExt32 = scanRaw8 (word8 0wxc9)
+      val scanExt16 = scanRaw16 (word8 0wxc8)
+      val scanExt32 = scanRaw32 (word8 0wxc9)
     in
       fun unpackBytesFromStr ins =
         let
