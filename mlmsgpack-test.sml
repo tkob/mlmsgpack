@@ -279,6 +279,18 @@ structure UnpackTest = struct
     ("unpackExt10", fn () => doUnpack unpackExt ([0xc8, 0xff, 0xff, 0x7f] @ List.tabulate (65535, fn _ => 0x01)) = (127, Word8Vector.tabulate (65535, fn n => 0w1))),
     ("unpackExt11", fn () => doUnpack unpackExt ([0xc9, 0x00, 0x01, 0x00, 0x00, 0x7f] @ List.tabulate (65536, fn _ => 0x01)) = (127, Word8Vector.tabulate (65536, fn n => 0w1))),
 
+    ("unpackExtOfType1", fn () => doUnpack (unpackExtOfType 0) [0xd4, 0x00, 0x01] = Word8Vector.tabulate (1, fn n => 0w1)),
+    ("unpackExtOfType2", fn () => doUnpack (unpackExtOfType 127) [0xd4, 0x7f, 0x01] = Word8Vector.tabulate (1, fn n => 0w1)),
+    ("unpackExtOfType3", fn () => doUnpack (unpackExtOfType 127) [0xd5, 0x7f, 0x01, 0x01] = Word8Vector.tabulate (2, fn n => 0w1)),
+    ("unpackExtOfType4", fn () => doUnpack (unpackExtOfType 127) ([0xd6, 0x7f] @ List.tabulate (4, fn _ => 0x01)) = Word8Vector.tabulate (4, fn n => 0w1)),
+    ("unpackExtOfType5", fn () => doUnpack (unpackExtOfType 127) ([0xd7, 0x7f] @ List.tabulate (8, fn _ => 0x01)) = Word8Vector.tabulate (8, fn n => 0w1)),
+    ("unpackExtOfType6", fn () => doUnpack (unpackExtOfType 127) ([0xd8, 0x7f] @ List.tabulate (16, fn _ => 0x01)) = Word8Vector.tabulate (16, fn n => 0w1)),
+    ("unpackExtOfType7", fn () => doUnpack (unpackExtOfType 127) [0xc7, 0x00, 0x7f] = Word8Vector.tabulate (0, fn n => 0w1)),
+    ("unpackExtOfType8", fn () => doUnpack (unpackExtOfType 127) ([0xc7, 0xff, 0x7f] @ List.tabulate (255, fn _ => 0x01)) = Word8Vector.tabulate (255, fn n => 0w1)),
+    ("unpackExtOfType9", fn () => doUnpack (unpackExtOfType 127) ([0xc8, 0x01, 0x00, 0x7f] @ List.tabulate (256, fn _ => 0x01)) = Word8Vector.tabulate (256, fn n => 0w1)),
+    ("unpackExtOfType10", fn () => doUnpack (unpackExtOfType 127) ([0xc8, 0xff, 0xff, 0x7f] @ List.tabulate (65535, fn _ => 0x01)) = Word8Vector.tabulate (65535, fn n => 0w1)),
+    ("unpackExtOfType11", fn () => doUnpack (unpackExtOfType 127) ([0xc9, 0x00, 0x01, 0x00, 0x00, 0x7f] @ List.tabulate (65536, fn _ => 0x01)) = Word8Vector.tabulate (65536, fn n => 0w1)),
+
     ("_", fn () => true)]
 
   datatype fail = Fail of string | Error of string * exn
