@@ -266,6 +266,19 @@ structure UnpackTest = struct
     fn () => doUnpack (unpackArray unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Array.tabulate (65535, fn _ => 1)) ,
     fn () => doUnpack (unpackArray unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Array.tabulate (65536, fn _ => 1)) ,
 *)
+
+    ("unpackExt1", fn () => doUnpack unpackExt [0xd4, 0x00, 0x01] = (0, Word8Vector.tabulate (1, fn n => 0w1))),
+    ("unpackExt2", fn () => doUnpack unpackExt [0xd4, 0x7f, 0x01] = (127, Word8Vector.tabulate (1, fn n => 0w1))),
+    ("unpackExt3", fn () => doUnpack unpackExt [0xd5, 0x7f, 0x01, 0x01] = (127, Word8Vector.tabulate (2, fn n => 0w1))),
+    ("unpackExt4", fn () => doUnpack unpackExt ([0xd6, 0x7f] @ List.tabulate (4, fn _ => 0x01)) = (127, Word8Vector.tabulate (4, fn n => 0w1))),
+    ("unpackExt5", fn () => doUnpack unpackExt ([0xd7, 0x7f] @ List.tabulate (8, fn _ => 0x01)) = (127, Word8Vector.tabulate (8, fn n => 0w1))),
+    ("unpackExt6", fn () => doUnpack unpackExt ([0xd8, 0x7f] @ List.tabulate (16, fn _ => 0x01)) = (127, Word8Vector.tabulate (16, fn n => 0w1))),
+    ("unpackExt7", fn () => doUnpack unpackExt [0xc7, 0x00, 0x7f] = (127, Word8Vector.tabulate (0, fn n => 0w1))),
+    ("unpackExt8", fn () => doUnpack unpackExt ([0xc7, 0xff, 0x7f] @ List.tabulate (255, fn _ => 0x01)) = (127, Word8Vector.tabulate (255, fn n => 0w1))),
+    ("unpackExt9", fn () => doUnpack unpackExt ([0xc8, 0x01, 0x00, 0x7f] @ List.tabulate (256, fn _ => 0x01)) = (127, Word8Vector.tabulate (256, fn n => 0w1))),
+    ("unpackExt10", fn () => doUnpack unpackExt ([0xc8, 0xff, 0xff, 0x7f] @ List.tabulate (65535, fn _ => 0x01)) = (127, Word8Vector.tabulate (65535, fn n => 0w1))),
+    ("unpackExt11", fn () => doUnpack unpackExt ([0xc9, 0x00, 0x01, 0x00, 0x00, 0x7f] @ List.tabulate (65536, fn _ => 0x01)) = (127, Word8Vector.tabulate (65536, fn n => 0w1))),
+
     ("_", fn () => true)]
 
   datatype fail = Fail of string | Error of string * exn
