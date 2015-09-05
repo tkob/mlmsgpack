@@ -102,6 +102,24 @@ structure PackTest = struct
     ("packArray4", fn () => doPack (packArray packInt) (Array.tabulate (65535, fn _ => 1)) = [0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)),
     ("packArray5", fn () => doPack (packArray packInt) (Array.tabulate (65536, fn _ => 1)) = [0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)),
 
+    ("packExt1", fn () => doPack (packExtOfType 0) (Word8Vector.tabulate (1, fn n => 0w1)) = [0xd4, 0, 1]),
+    ("packExt2", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (1, fn n => 0w1)) = [0xd4, 127, 1]),
+    ("packExt3", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (2, fn n => 0w1)) = [0xd5, 127, 1, 1]),
+    ("packExt4", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (4, fn n => 0w1)) = [0xd6, 127, 1, 1, 1, 1]),
+    ("packExt5", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (8, fn n => 0w1)) = [0xd7, 127, 1, 1, 1, 1, 1, 1, 1, 1]),
+    ("packExt6", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (16, fn n => 0w1)) = [0xd8, 127] @ List.tabulate (16, fn n => 1)),
+    ("packExt7", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (3, fn n => 0w1)) = [0xc7, 3, 127] @ List.tabulate (3, fn n => 1)),
+    ("packExt8", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (5, fn n => 0w1)) = [0xc7, 5, 127] @ List.tabulate (5, fn n => 1)),
+    ("packExt9", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (7, fn n => 0w1)) = [0xc7, 7, 127] @ List.tabulate (7, fn n => 1)),
+    ("packExt10", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (9, fn n => 0w1)) = [0xc7, 9, 127] @ List.tabulate (9, fn n => 1)),
+    ("packExt11", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (15, fn n => 0w1)) = [0xc7, 15, 127] @ List.tabulate (15, fn n => 1)),
+    ("packExt12", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (17, fn n => 0w1)) = [0xc7, 17, 127] @ List.tabulate (17, fn n => 1)),
+    ("packExt13", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (255, fn n => 0w1)) = [0xc7, 255, 127] @ List.tabulate (255, fn n => 1)),
+    ("packExt14", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (0, fn n => 0w1)) = [0xc7, 0, 127]),
+    ("packExt15", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (256, fn n => 0w1)) = [0xc8, 0x01, 0x00, 127] @ List.tabulate (256, fn n => 1)),
+    ("packExt16", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (65535, fn n => 0w1)) = [0xc8, 0xff, 0xff, 127] @ List.tabulate (65535, fn n => 1)),
+    ("packExt17", fn () => doPack (packExtOfType 127) (Word8Vector.tabulate (65536, fn n => 0w1)) = [0xc9, 0x00, 0x01, 0x00, 0x00, 127] @ List.tabulate (65536, fn n => 1)),
+
     ("_", fn () => true)]
 
   datatype fail = Fail of string | Error of string * exn
@@ -248,6 +266,31 @@ structure UnpackTest = struct
     fn () => doUnpack (unpackArray unpackInt) ([0xdc, 0xff, 0xff] @ List.tabulate (65535, fn _ => 1)) = (Array.tabulate (65535, fn _ => 1)) ,
     fn () => doUnpack (unpackArray unpackInt) ([0xdd, 0x00, 0x01, 0x00, 0x00] @ List.tabulate (65536, fn _ => 1)) = (Array.tabulate (65536, fn _ => 1)) ,
 *)
+
+    ("unpackExt1", fn () => doUnpack unpackExt [0xd4, 0x00, 0x01] = (0, Word8Vector.tabulate (1, fn n => 0w1))),
+    ("unpackExt2", fn () => doUnpack unpackExt [0xd4, 0x7f, 0x01] = (127, Word8Vector.tabulate (1, fn n => 0w1))),
+    ("unpackExt3", fn () => doUnpack unpackExt [0xd5, 0x7f, 0x01, 0x01] = (127, Word8Vector.tabulate (2, fn n => 0w1))),
+    ("unpackExt4", fn () => doUnpack unpackExt ([0xd6, 0x7f] @ List.tabulate (4, fn _ => 0x01)) = (127, Word8Vector.tabulate (4, fn n => 0w1))),
+    ("unpackExt5", fn () => doUnpack unpackExt ([0xd7, 0x7f] @ List.tabulate (8, fn _ => 0x01)) = (127, Word8Vector.tabulate (8, fn n => 0w1))),
+    ("unpackExt6", fn () => doUnpack unpackExt ([0xd8, 0x7f] @ List.tabulate (16, fn _ => 0x01)) = (127, Word8Vector.tabulate (16, fn n => 0w1))),
+    ("unpackExt7", fn () => doUnpack unpackExt [0xc7, 0x00, 0x7f] = (127, Word8Vector.tabulate (0, fn n => 0w1))),
+    ("unpackExt8", fn () => doUnpack unpackExt ([0xc7, 0xff, 0x7f] @ List.tabulate (255, fn _ => 0x01)) = (127, Word8Vector.tabulate (255, fn n => 0w1))),
+    ("unpackExt9", fn () => doUnpack unpackExt ([0xc8, 0x01, 0x00, 0x7f] @ List.tabulate (256, fn _ => 0x01)) = (127, Word8Vector.tabulate (256, fn n => 0w1))),
+    ("unpackExt10", fn () => doUnpack unpackExt ([0xc8, 0xff, 0xff, 0x7f] @ List.tabulate (65535, fn _ => 0x01)) = (127, Word8Vector.tabulate (65535, fn n => 0w1))),
+    ("unpackExt11", fn () => doUnpack unpackExt ([0xc9, 0x00, 0x01, 0x00, 0x00, 0x7f] @ List.tabulate (65536, fn _ => 0x01)) = (127, Word8Vector.tabulate (65536, fn n => 0w1))),
+
+    ("unpackExtOfType1", fn () => doUnpack (unpackExtOfType 0) [0xd4, 0x00, 0x01] = Word8Vector.tabulate (1, fn n => 0w1)),
+    ("unpackExtOfType2", fn () => doUnpack (unpackExtOfType 127) [0xd4, 0x7f, 0x01] = Word8Vector.tabulate (1, fn n => 0w1)),
+    ("unpackExtOfType3", fn () => doUnpack (unpackExtOfType 127) [0xd5, 0x7f, 0x01, 0x01] = Word8Vector.tabulate (2, fn n => 0w1)),
+    ("unpackExtOfType4", fn () => doUnpack (unpackExtOfType 127) ([0xd6, 0x7f] @ List.tabulate (4, fn _ => 0x01)) = Word8Vector.tabulate (4, fn n => 0w1)),
+    ("unpackExtOfType5", fn () => doUnpack (unpackExtOfType 127) ([0xd7, 0x7f] @ List.tabulate (8, fn _ => 0x01)) = Word8Vector.tabulate (8, fn n => 0w1)),
+    ("unpackExtOfType6", fn () => doUnpack (unpackExtOfType 127) ([0xd8, 0x7f] @ List.tabulate (16, fn _ => 0x01)) = Word8Vector.tabulate (16, fn n => 0w1)),
+    ("unpackExtOfType7", fn () => doUnpack (unpackExtOfType 127) [0xc7, 0x00, 0x7f] = Word8Vector.tabulate (0, fn n => 0w1)),
+    ("unpackExtOfType8", fn () => doUnpack (unpackExtOfType 127) ([0xc7, 0xff, 0x7f] @ List.tabulate (255, fn _ => 0x01)) = Word8Vector.tabulate (255, fn n => 0w1)),
+    ("unpackExtOfType9", fn () => doUnpack (unpackExtOfType 127) ([0xc8, 0x01, 0x00, 0x7f] @ List.tabulate (256, fn _ => 0x01)) = Word8Vector.tabulate (256, fn n => 0w1)),
+    ("unpackExtOfType10", fn () => doUnpack (unpackExtOfType 127) ([0xc8, 0xff, 0xff, 0x7f] @ List.tabulate (65535, fn _ => 0x01)) = Word8Vector.tabulate (65535, fn n => 0w1)),
+    ("unpackExtOfType11", fn () => doUnpack (unpackExtOfType 127) ([0xc9, 0x00, 0x01, 0x00, 0x00, 0x7f] @ List.tabulate (65536, fn _ => 0x01)) = Word8Vector.tabulate (65536, fn n => 0w1)),
+
     ("_", fn () => true)]
 
   datatype fail = Fail of string | Error of string * exn
