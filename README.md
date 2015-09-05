@@ -99,11 +99,6 @@ Also, some unit tests fail.
 
 Most functions do not work properly because of bugs of SML# prior to version 2.0.0.
 
-Status
-------
-
-Ext is not supported yet.
-
 See Also
 --------
 
