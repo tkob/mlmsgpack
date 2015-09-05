@@ -88,7 +88,7 @@ ML-MessagePack maps ('a * 'b) list to Map type of MessagePack:
     > BytesIO.toBytes outs;
     val it = fromList[0wx82, 0wx1, 0wxC3, 0wx2, 0wxC2] : Word8Vector.vector
 
-Be warned that `packPair (packInt, packBool)` and `packPairList (packInt, packBool)` are not same even though they both are of type `(int * bool) list packer`.
+Be warned that `packList (packPair (packInt, packBool))` and `packPairList (packInt, packBool)` are not same even though they both are of type `(int * bool) list packer`.
 The former produces Array of MessagePack and the latter produces Map of MessageType.
 
 ## Unpacking values
@@ -137,7 +137,7 @@ You might think as folloing:
 
     > val unpackNumber = (unpackReal || unpackInt);
 
-However, this does not work because of type error; real and int does not unify.
+However, this does not work because of type error; real and int do not unify.
 
 In such situation, >> combinator can be used:
 
