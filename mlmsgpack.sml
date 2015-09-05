@@ -689,7 +689,7 @@ end = struct
           val (length, ins') = (
                scanFixExt1 || scanFixExt2 || scanFixExt4 || scanFixExt8 || scanFixExt16
             || scanExt8 || scanExt16 || scanExt32) ins
-          val (typ, ins'') = case S.input1 ins of SOME x => x | NONE => raise Unpack
+          val (typ, ins'') = case S.input1 ins' of SOME x => x | NONE => raise Unpack
           val (bytes, ins''') = S.inputN (ins'', length)
         in
           ((Word8.toInt typ, bytes), ins''')
