@@ -11,6 +11,8 @@ functor MessagePack(S : sig
 
     val doPack : 'a packer -> 'a -> S.outstream -> unit
 
+    val fromFn : ('a -> S.outstream -> unit) -> 'a packer
+
     val packList   : 'a packer -> 'a list   packer
     val packVector : 'a packer -> 'a vector packer
     val packArray  : 'a packer -> 'a array  packer
@@ -43,6 +45,8 @@ functor MessagePack(S : sig
 
     val doUnpack : 'a unpacker -> S.instream -> 'a * S.instream
   
+    val fromFn : (S.instream -> 'a * S.instream) -> 'a unpacker
+
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
     val >> : 'a unpacker * ('a -> 'b) -> 'b unpacker
 
@@ -96,6 +100,8 @@ end = struct
     type 'a packer = 'a -> S.outstream -> unit
 
     fun doPack p value outs = p value outs
+
+    fun fromFn f = f
 
     local
       (* with the expectation that the compiler will optimize this idiom *)
@@ -329,6 +335,8 @@ end = struct
     type 'a unpacker = S.instream -> 'a * S.instream
 
     fun doUnpack u ins = u ins
+
+    fun fromFn f = f
   
     (* alternate *)
     infix 0 ||

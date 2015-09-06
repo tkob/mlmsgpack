@@ -15,6 +15,8 @@ functor MessagePack(S : sig
 
     val doPack : 'a packer -> 'a -> S.outstream -> unit
 
+    val fromFn : ('a -> S.outstream -> unit) -> 'a packer
+
     val packList   : 'a packer -> 'a list   packer
     val packVector : 'a packer -> 'a vector packer
     val packArray  : 'a packer -> 'a array  packer
@@ -48,6 +50,8 @@ functor MessagePack(S : sig
 
     val doUnpack : 'a unpacker -> S.instream -> 'a * S.instream
   
+    val fromFn : (S.instream -> 'a * S.instream) -> 'a unpacker
+
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
     val >> : 'a unpacker * ('a -> 'b) -> 'b unpacker
 
@@ -98,6 +102,8 @@ structure MessagePackBinIO = struct
 
     val doPack : 'a packer -> 'a -> BinIO.StreamIO.outstream -> unit
 
+    val fromFn : ('a -> BinIO.StreamIO.outstream -> unit) -> 'a packer
+
     val packList   : 'a packer -> 'a list   packer
     val packVector : 'a packer -> 'a vector packer
     val packArray  : 'a packer -> 'a array  packer
@@ -124,6 +130,8 @@ structure MessagePackBinIO = struct
     type 'a unpacker (=boxed)
 
     val doUnpack : 'a unpacker -> BinIO.StreamIO.instream -> 'a * BinIO.StreamIO.instream
+
+    val fromFn : (BinIO.StreamIO.instream -> 'a * BinIO.StreamIO.instream) -> 'a unpacker
 
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
 
@@ -160,6 +168,8 @@ structure MessagePackIntListIO = struct
 
     val doPack : 'a packer -> 'a -> IntListIO.outstream -> unit
 
+    val fromFn : ('a -> IntListIO.outstream -> unit) -> 'a packer
+
     val packList   : 'a packer -> 'a list   packer
     val packVector : 'a packer -> 'a vector packer
     val packArray  : 'a packer -> 'a array  packer
@@ -187,6 +197,8 @@ structure MessagePackIntListIO = struct
 
     val doUnpack : 'a unpacker -> IntListIO.instream -> 'a * IntListIO.instream
   
+    val fromFn : (IntListIO.instream -> 'a * IntListIO.instream) -> 'a unpacker
+
     val || : 'a unpacker * 'a unpacker -> 'a unpacker
 
     val unpackArrayFold : 'a unpacker -> ('a * 'b -> 'b) -> 'b -> 'b unpacker
