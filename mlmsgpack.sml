@@ -711,32 +711,6 @@ end = struct
   end
 end
 
-(*
-structure BinTextIO :> sig
-  type instream
-  type outstream
-  val stdIn : instream
-  val stdOut : outstream
-  val input1 : instream -> (Word8.word * instream) option
-  val inputN : instream * int -> Word8Vector.vector * instream
-  val output1 : outstream * Word8.word -> unit
-end = struct
-  type instream = TextIO.StreamIO.instream 
-  type outstream = TextIO.outstream 
-  val stdIn = TextIO.getInstream TextIO.stdIn
-  val stdOut = TextIO.stdOut
-  fun input1 ins =
-    case TextIO.StreamIO.input1 ins of
-      SOME (char, ins') => SOME (Byte.charToByte char, ins')
-    | NONE => NONE
-  fun inputN (ins, n) =
-    let val (string, ins') = TextIO.StreamIO.inputN (ins, n) in
-      (Byte.stringToBytes string, ins')
-    end
-  fun output1 (outs, byte) = TextIO.output1 (outs, (Byte.byteToChar byte))
-end
-*)
-
 structure BytesIO = struct
   datatype bytes_list = Nil | ConsA of int ref * Word8Array.array * bytes_list | ConsV of Word8Vector.vector * bytes_list
   type instream = Word8VectorSlice.slice
@@ -829,7 +803,6 @@ structure IntListIO = struct
   fun mkOutstream () : outstream = ref []
 end
 
-(* structure MessagePackBinIO = MessagePack(structure PR = PR; structure S = BinIO.StreamIO)
-structure MessagePackBinTextIO = MessagePack(structure PR = PR; structure S = BinTextIO) *)
+structure MessagePackBinIO = MessagePack(BinIO.StreamIO)
 structure MessagePackIntListIO = MessagePack(IntListIO)
 structure MessagePackBytesIO = MessagePack(BytesIO)
