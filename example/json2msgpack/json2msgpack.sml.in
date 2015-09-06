@@ -1,0 +1,57 @@
+(* vim: set filetype=sml : *)
+
+structure Main = struct
+  open MessagePackBinIO.Pack
+
+  fun packJson (JSON.OBJECT pairs) outs =
+        doPack (packPairList (packString, fromFn packJson)) pairs outs
+    | packJson (JSON.ARRAY values) outs =
+        doPack (packList (fromFn packJson)) values outs
+    | packJson (JSON.NULL) outs =
+        doPack packUnit () outs
+    | packJson (JSON.BOOL value)outs =
+        doPack packBool value outs
+    | packJson (JSON.INT value) outs =
+        doPack packInt (IntInf.toInt value) outs
+    | packJson (JSON.FLOAT value) outs =
+        doPack packReal value outs
+    | packJson (JSON.STRING value) outs =
+        doPack packString value outs
+
+  fun getStdOut () : BinIO.StreamIO.outstream =
+        let
+          val writer = Posix.IO.mkBinWriter
+                         { fd = Posix.FileSys.stdout,
+                           name = "-",
+                           appendMode = true,
+                           initBlkMode = false,
+                           chunkSize = 1024 }
+        in
+          BinIO.StreamIO.mkOutstream (writer, IO.BLOCK_BUF)
+        end
+
+  fun main (name: string, arguments : string list) =
+        let
+          val jsonValue = JSONParser.parse TextIO.stdIn
+          val stdOut = getStdOut ()
+        in
+          (* JSONPrinter.print (TextIO.stdErr, jsonValue); *)
+          packJson jsonValue stdOut;
+          BinIO.StreamIO.flushOut stdOut;
+          OS.Process.success
+        end
+        handle e => (
+          TextIO.output (TextIO.stdErr, exnMessage e ^ "\n");
+          OS.Process.failure)
+end
+
+ifelse(SML_COMPILER, `mlton', `define(`SML_MAIN_FUN')')
+ifdef(`SML_MAIN_FUN',`
+fun main () =
+      OS.Process.exit (Main.main (CommandLine.name (), CommandLine.arguments ())
+')
+
+ifelse(SML_COMPILER, `mlton', `define(`SML_BOOT_VAL')')
+ifdef(`SML_BOOT_VAL',`
+val _ = main ()
+')

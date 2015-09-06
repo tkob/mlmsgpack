@@ -1,0 +1,4 @@
+$(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/smlnj-lib/JSON/json-lib.mlb
+../../mlmsgpack.mlb
+json2msgpack.sml
