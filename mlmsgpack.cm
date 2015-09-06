@@ -1,6 +1,7 @@
 Library
   functor MessagePack
 
+  structure MessagePackBinIO
   structure IntListIO
   structure MessagePackIntListIO
   structure BytesIO
