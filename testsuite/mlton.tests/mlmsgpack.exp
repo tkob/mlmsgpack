@@ -1,0 +1,61 @@
+# vim: set filetype=tcl :
+
+# build and run mlmsgpack-test
+
+spawn mlton mlmsgpack-test.mlb
+exitstatus should be 0 or "building mlmsgpack-test failed"
+
+spawn ./mlmsgpack-test
+expect {
+    "failed" { fail "mlmsgpack-test failed" }
+}
+exitstatus should be 0
+
+# build json2msgpack, software under test here
+withdir example/json2msgpack {
+    spawn make -f Makefile.mlton
+    exitstatus should be 0
+}
+
+# build msgpack-echo, msgpack-c based tool, which we use as a test oracle
+spawn cc -o testsuite/msgpack-echo testsuite/msgpack-echo.c -lmsgpack
+exitstatus should be 0
+
+set json2msgpack example/json2msgpack/json2msgpack
+set msgpackecho testsuite/msgpack-echo
+
+proc testjson {testname json expected} {
+    global json2msgpack msgpackecho
+    set pass 0
+    spawn sh -c "echo '$json' | $json2msgpack | $msgpackecho"
+    expect {
+        -ex $expected { pass $testname }
+        timeout { fail "$testname: timeout" }
+        eof { fail $testname }
+    }
+}
+
+testjson {nil} null nil
+testjson {bool true} true true
+testjson {bool false} false false
+testjson {int min positive fixnum} 0 0
+testjson {int max positive fixnum} 127 127
+testjson {int min uint8} 128 128
+testjson {int max uint8} 255 255
+testjson {int min uint16} 256 256
+testjson {int max uint16} 65535 65535
+testjson {int min uint32} 65536 65536
+#testjson {int max int31} 1073741823 1073741823
+testjson {int max int32} 2147483647 2147483647
+#testjson {int min int64} 2147483648 2147483648
+testjson {int max negative fixnum} -1 -1
+testjson {int min negative fixnum} -32 -32
+testjson {int int8} -33 -33
+testjson {int min int8} -128 -128
+testjson {int int16} -129 -129
+testjson {int min int 16} -32768 -32768
+testjson {int int32} -32769 -32769
+#testjson {int min int31} -1073741824 -1073741824
+testjson {int min int32} -2147483648 -2147483648
+#testjson {int int64} -2147483649 -2147483649
+
