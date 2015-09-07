@@ -48,7 +48,8 @@ end
 ifelse(SML_COMPILER, `mlton', `define(`SML_MAIN_FUN')')
 ifdef(`SML_MAIN_FUN',`
 fun main () =
-      OS.Process.exit (Main.main (CommandLine.name (), CommandLine.arguments ())
+      OS.Process.exit
+        (Main.main (CommandLine.name (), CommandLine.arguments ()))
 ')
 
 ifelse(SML_COMPILER, `mlton', `define(`SML_BOOT_VAL')')
