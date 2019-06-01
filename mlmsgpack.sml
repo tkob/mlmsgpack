@@ -290,7 +290,8 @@ end = struct
         let val length = Word8Vector.length bytes in
           if length < 32 then
             (* FixStr *)
-            S.output1 (outs, (Word8.orb (word8 0wxa0, Word8.fromInt length)))
+            (S.output1 (outs, (Word8.orb (word8 0wxa0, Word8.fromInt length)));
+            S.output (outs, bytes))
           else
             packRaw (word8 0wxd9, word8 0wxda, word8 0wxdb, emptyBytes) bytes outs
         end
